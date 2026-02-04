@@ -1,0 +1,76 @@
+export interface UserProfile {
+    uid: string;
+    email: string | null;
+    displayName: string | null;
+    photoURL: string | null;
+    role: 'admin' | 'member';
+    createdAt: any; // Firestore Timestamp
+    lastLogin: any; // Firestore Timestamp
+}
+
+export interface Client {
+    id: string;
+    name: string;
+    createdAt: any;
+    createdBy: string;
+    updatedAt: any;
+}
+
+export interface ProjectGroup {
+    id: string;
+    name: string;
+    clientId: string;
+    createdAt: any;
+    createdBy: string;
+    updatedAt: any;
+}
+
+export interface Project {
+    id: string;
+    name: string;
+    groupId: string;
+    clientId: string; // Denormalized for easier queries
+    boxFolderId?: string;
+    swimlanes?: Swimlane[];
+    statuses?: Status[];
+    createdAt: any;
+    createdBy: string;
+    updatedAt: any;
+}
+
+export interface Swimlane {
+    id: string;
+    name: string;
+    order: number;
+}
+
+export interface Status {
+    id: string;
+    name: string;
+    order: number;
+}
+
+export interface Ticket {
+    id: string;
+    title: string;
+    description: string;
+    projectId: string;
+    swimlaneId: string;
+    statusId: string;
+    assigneeId?: string;
+    order: number;
+    attachments?: Attachment[];
+    createdAt: any;
+    createdBy: string;
+    updatedAt: any;
+}
+
+export interface Attachment {
+    id: string;
+    name: string;
+    type: 'image' | 'video' | 'audio';
+    boxFileId: string;
+    boxSharedLink: string;
+    uploadedAt: any;
+    uploadedBy: string;
+}
