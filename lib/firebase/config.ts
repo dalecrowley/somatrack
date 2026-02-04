@@ -1,6 +1,6 @@
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
+import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,11 +11,37 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase only once
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+// Extended global interface for development cache
+declare global {
+  var _firebaseApp: ReturnType<typeof initializeApp> | undefined;
+  var _firebaseAuth: ReturnType<typeof getAuth> | undefined;
+  var _firebaseDb: ReturnType<typeof getFirestore> | undefined;
+}
 
-// Initialize services
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
 
-export default app;
+if (process.env.NODE_ENV === 'production') {
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  auth = getAuth(app);
+  db = getFirestore(app);
+} else {
+  // In development, use global variables to prevent re-initialization during HMR
+  if (!globalThis._firebaseApp) {
+    globalThis._firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  }
+  app = globalThis._firebaseApp;
+
+  if (!globalThis._firebaseAuth) {
+    globalThis._firebaseAuth = getAuth(app);
+  }
+  auth = globalThis._firebaseAuth;
+
+  if (!globalThis._firebaseDb) {
+    globalThis._firebaseDb = getFirestore(app);
+  }
+  db = globalThis._firebaseDb;
+}
+
+export { app, auth, db };

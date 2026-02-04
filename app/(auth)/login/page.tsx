@@ -19,7 +19,7 @@ export default function LoginPage() {
         try {
             const user = await signInWithGoogle();
             console.log('Login successful, redirecting to home...', user);
-            router.push('/'); // Redirect to home after successful login
+            router.push('/dashboard'); // Redirect to dashboard after successful login
         } catch (err: any) {
             console.error('Login error caught in page:', err);
             setError(err.message || 'Failed to sign in. Please try again.');

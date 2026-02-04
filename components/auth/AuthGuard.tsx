@@ -2,17 +2,16 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthStore } from '@/lib/store/useAuthStore';
+import { Loader2 } from 'lucide-react';
 
 interface AuthGuardProps {
     children: React.ReactNode;
 }
 
-/**
- * Protects routes by redirecting unauthenticated users to login
- */
 export default function AuthGuard({ children }: AuthGuardProps) {
-    const { user, loading } = useAuth();
+    const user = useAuthStore((state) => state.user);
+    const loading = useAuthStore((state) => state.loading);
     const router = useRouter();
 
     useEffect(() => {
@@ -21,19 +20,14 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         }
     }, [user, loading, router]);
 
-    // Show loading state while checking authentication
     if (loading) {
         return (
-            <div className="flex h-screen items-center justify-center">
-                <div className="text-center">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Loading...</p>
-                </div>
+            <div className="flex h-screen w-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         );
     }
 
-    // Don't render children until authenticated
     if (!user) {
         return null;
     }

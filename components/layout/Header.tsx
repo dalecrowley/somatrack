@@ -1,8 +1,9 @@
 'use client';
 
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/store/useAuthStore';
 import { signOut } from '@/lib/firebase/auth';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -11,23 +12,25 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import Link from 'next/link';
 
 export default function Header() {
-    const { userData } = useAuth();
+    const user = useAuthStore((state) => state.user);
+    const router = useRouter();
 
     const handleSignOut = async () => {
         try {
             await signOut();
+            router.push('/login');
         } catch (error) {
-            console.error('Error signing out:', error);
+            console.error('Failed to sign out', error);
         }
     };
 
-    const getInitials = (name: string | null) => {
-        if (!name) return 'U';
-        return name
+    const getUserInitials = () => {
+        if (!user?.displayName) return 'ST';
+        return user.displayName
             .split(' ')
             .map((n) => n[0])
             .join('')
@@ -37,45 +40,51 @@ export default function Header() {
 
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-16 items-center justify-between px-4">
-                <div className="flex items-center gap-8">
-                    <Link href="/" className="flex items-center gap-2 font-semibold text-xl">
-                        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
+            <div className="container flex h-14 items-center">
+                <div className="mr-4 flex">
+                    <Link href="/dashboard" className="mr-6 flex items-center space-x-2">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
                             ST
                         </div>
-                        <span>SomaTrack</span>
+                        <span className="hidden font-bold sm:inline-block">SomaTrack</span>
                     </Link>
-
-                    <nav className="hidden md:flex items-center gap-6 text-sm">
+                    <nav className="flex items-center space-x-6 text-sm font-medium">
+                        <Link
+                            href="/dashboard"
+                            className="transition-colors hover:text-foreground/80 text-foreground/60"
+                        >
+                            Dashboard
+                        </Link>
                         <Link
                             href="/clients"
-                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            className="transition-colors hover:text-foreground/80 text-foreground/60"
                         >
                             Clients
                         </Link>
                     </nav>
                 </div>
-
-                <div className="flex items-center gap-4">
-                    {userData && (
+                <div className="flex flex-1 items-center justify-end space-x-2">
+                    {user && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                                    <Avatar>
-                                        <AvatarImage src={userData.photoURL || undefined} alt={userData.displayName || 'User'} />
-                                        <AvatarFallback>{getInitials(userData.displayName)}</AvatarFallback>
+                                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarImage src={user.photoURL || ''} alt={user.displayName || ''} />
+                                        <AvatarFallback>{getUserInitials()}</AvatarFallback>
                                     </Avatar>
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
-                                <DropdownMenuLabel>
+                            <DropdownMenuContent className="w-56" align="end" forceMount>
+                                <DropdownMenuLabel className="font-normal">
                                     <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium leading-none">{userData.displayName}</p>
-                                        <p className="text-xs leading-none text-muted-foreground">{userData.email}</p>
+                                        <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                                        <p className="text-xs leading-none text-muted-foreground">
+                                            {user.email}
+                                        </p>
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600">
+                                <DropdownMenuItem onClick={handleSignOut}>
                                     Sign out
                                 </DropdownMenuItem>
                             </DropdownMenuContent>

@@ -8,9 +8,9 @@ export default function AppLayout({
 }) {
     return (
         <AuthGuard>
-            <div className="min-h-screen flex flex-col">
+            <div className="min-h-screen bg-background">
                 <Header />
-                <main className="flex-1">{children}</main>
+                <main className="container py-6">{children}</main>
             </div>
         </AuthGuard>
     );
