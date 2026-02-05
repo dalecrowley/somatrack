@@ -10,7 +10,7 @@ export default function AppLayout({
         <AuthGuard>
             <div className="min-h-screen bg-background">
                 <Header />
-                <main className="container py-6">{children}</main>
+                <main className="py-6">{children}</main>
             </div>
         </AuthGuard>
     );

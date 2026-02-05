@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useProjectGroups } from '@/hooks/useProjectGroups';
+import { useProjects } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -17,13 +17,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus } from 'lucide-react';
 
-interface CreateProjectGroupDialogProps {
+interface CreateProjectDialogProps {
     clientId: string;
 }
 
-export function CreateProjectGroupDialog({ clientId }: CreateProjectGroupDialogProps) {
+export function CreateProjectDialog({ clientId }: CreateProjectDialogProps) {
     const { user } = useAuth();
-    const { addGroup } = useProjectGroups(clientId);
+    const { addProject } = useProjects(clientId);
     const [open, setOpen] = useState(false);
     const [name, setName] = useState('');
     const [loading, setLoading] = useState(false);
@@ -34,7 +34,7 @@ export function CreateProjectGroupDialog({ clientId }: CreateProjectGroupDialogP
 
         setLoading(true);
         try {
-            const success = await addGroup(name, user.uid);
+            const success = await addProject(name, user.uid);
             if (success) {
                 setOpen(false);
                 setName('');
@@ -49,28 +49,28 @@ export function CreateProjectGroupDialog({ clientId }: CreateProjectGroupDialogP
             <DialogTrigger asChild>
                 <Button>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Group
+                    Add Project
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <Form onSubmit={handleSubmit}>
                     <DialogHeader>
-                        <DialogTitle>Add Project Group</DialogTitle>
+                        <DialogTitle>Add Project</DialogTitle>
                         <DialogDescription>
-                            Create a new group to organize projects for this client.
+                            Create a new project for this client.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="group-name" className="text-right">
+                            <Label htmlFor="project-name" className="text-right">
                                 Name
                             </Label>
                             <Input
-                                id="group-name"
+                                id="project-name"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 className="col-span-3"
-                                placeholder="e.g. Marketing, Development"
+                                placeholder="e.g. Website Redesign, Mobile App"
                                 autoFocus
                                 required
                             />
@@ -78,7 +78,7 @@ export function CreateProjectGroupDialog({ clientId }: CreateProjectGroupDialogP
                     </div>
                     <DialogFooter>
                         <Button type="submit" disabled={loading || !name.trim()}>
-                            {loading ? 'Creating...' : 'Create Group'}
+                            {loading ? 'Creating...' : 'Create Project'}
                         </Button>
                     </DialogFooter>
                 </Form>

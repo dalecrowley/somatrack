@@ -7,7 +7,7 @@ export default function DashboardPage() {
     const user = useAuthStore((state) => state.user);
 
     return (
-        <div className="space-y-6">
+        <div className="container space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             </div>

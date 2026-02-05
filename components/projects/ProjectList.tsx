@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { MoreHorizontal, FolderOpen, Trash2, Edit2, Folder } from 'lucide-react';
-import { ProjectGroup } from '@/types';
-import { useProjectGroups } from '@/hooks/useProjectGroups';
-import { EditProjectGroupDialog } from './EditProjectGroupDialog';
+import { MoreHorizontal, FolderOpen, Trash2, Edit2, Folder, Layout } from 'lucide-react';
+import { Project } from '@/types';
+import { useProjects } from '@/hooks/useProjects';
+import { EditProjectDialog } from './EditProjectDialog';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -32,20 +32,20 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-interface ProjectGroupListProps {
-    groups: ProjectGroup[];
+interface ProjectListProps {
+    projects: Project[];
     isLoading: boolean;
     clientId: string;
 }
 
-export function ProjectGroupList({ groups, isLoading, clientId }: ProjectGroupListProps) {
-    const { removeGroup } = useProjectGroups(clientId);
+export function ProjectList({ projects, isLoading, clientId }: ProjectListProps) {
+    const { removeProject } = useProjects(clientId);
     const [deleteId, setDeleteId] = useState<string | null>(null);
-    const [editingGroup, setEditingGroup] = useState<ProjectGroup | null>(null);
+    const [editingProject, setEditingProject] = useState<Project | null>(null);
 
     const handleDelete = async () => {
         if (deleteId) {
-            await removeGroup(deleteId);
+            await removeProject(deleteId);
             setDeleteId(null);
         }
     };
@@ -63,15 +63,15 @@ export function ProjectGroupList({ groups, isLoading, clientId }: ProjectGroupLi
         );
     }
 
-    if (groups.length === 0) {
+    if (projects.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center animate-in fade-in-50">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                     <FolderOpen className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <h3 className="mt-4 text-lg font-semibold">No project groups yet</h3>
+                <h3 className="mt-4 text-lg font-semibold">No projects yet</h3>
                 <p className="mb-4 text-sm text-muted-foreground">
-                    Create a group to organize projects for this client.
+                    Create a project for this client.
                 </p>
             </div>
         );
@@ -80,18 +80,18 @@ export function ProjectGroupList({ groups, isLoading, clientId }: ProjectGroupLi
     return (
         <>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {groups.map((group) => (
-                    <Card key={group.id} className="group relative overflow-hidden transition-all hover:shadow-md">
+                {projects.map((project) => (
+                    <Card key={project.id} className="group relative overflow-hidden transition-all hover:shadow-md">
                         <Link
-                            href={`/clients/${clientId}/groups/${group.id}/projects`}
+                            href={`/clients/${clientId}/projects/${project.id}`}
                             className="absolute inset-0 z-10"
                         >
-                            <span className="sr-only">View {group.name}</span>
+                            <span className="sr-only">View {project.name}</span>
                         </Link>
 
                         <CardHeader>
                             <div className="flex items-start justify-between space-y-0">
-                                <CardTitle className="text-xl font-bold truncate pr-8">{group.name}</CardTitle>
+                                <CardTitle className="text-xl font-bold truncate pr-8">{project.name}</CardTitle>
                                 <div className="relative z-20">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
@@ -104,7 +104,7 @@ export function ProjectGroupList({ groups, isLoading, clientId }: ProjectGroupLi
                                             <DropdownMenuItem
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setEditingGroup(group);
+                                                    setEditingProject(project);
                                                 }}
                                             >
                                                 <Edit2 className="mr-2 h-4 w-4" />
@@ -114,7 +114,7 @@ export function ProjectGroupList({ groups, isLoading, clientId }: ProjectGroupLi
                                                 className="text-red-600"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setDeleteId(group.id);
+                                                    setDeleteId(project.id);
                                                 }}
                                             >
                                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -125,13 +125,13 @@ export function ProjectGroupList({ groups, isLoading, clientId }: ProjectGroupLi
                                 </div>
                             </div>
                             <CardDescription>
-                                Created {group.createdAt ? formatDistanceToNow(group.createdAt.toDate(), { addSuffix: true }) : 'recently'}
+                                Created {project.createdAt ? formatDistanceToNow(project.createdAt.toDate(), { addSuffix: true }) : 'recently'}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center text-sm text-muted-foreground">
-                                <Folder className="mr-2 h-4 w-4" />
-                                <span>View Projects</span>
+                                <Layout className="mr-2 h-4 w-4" />
+                                <span>View Board</span>
                             </div>
                         </CardContent>
                     </Card>
@@ -143,8 +143,8 @@ export function ProjectGroupList({ groups, isLoading, clientId }: ProjectGroupLi
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the project group
-                            and all associated projects.
+                            This action cannot be undone. This will permanently delete the project
+                            and all associated tasks.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -156,10 +156,10 @@ export function ProjectGroupList({ groups, isLoading, clientId }: ProjectGroupLi
                 </AlertDialogContent>
             </AlertDialog>
 
-            <EditProjectGroupDialog
-                group={editingGroup}
-                open={!!editingGroup}
-                onOpenChange={(open) => !open && setEditingGroup(null)}
+            <EditProjectDialog
+                project={editingProject}
+                open={!!editingProject}
+                onOpenChange={(open) => !open && setEditingProject(null)}
                 clientId={clientId}
             />
         </>

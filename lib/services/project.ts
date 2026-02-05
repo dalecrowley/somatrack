@@ -13,14 +13,14 @@ import {
     onSnapshot
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import { ProjectGroup } from '@/types';
+import { Project } from '@/types';
 
-const COLLECTION = 'projectGroups';
+const COLLECTION = 'projects';
 
 /**
- * Create a new project group
+ * Create a new project
  */
-export const createProjectGroup = async (
+export const createProject = async (
     name: string,
     clientId: string,
     userId: string
@@ -35,17 +35,17 @@ export const createProjectGroup = async (
         });
         return docRef.id;
     } catch (error) {
-        console.error('Error creating project group:', error);
+        console.error('Error creating project:', error);
         throw error;
     }
 };
 
 /**
- * Subscribe to project groups for a specific client
+ * Subscribe to projects for a specific client
  */
-export const subscribeToProjectGroups = (
+export const subscribeToProjects = (
     clientId: string,
-    callback: (groups: ProjectGroup[]) => void
+    callback: (projects: Project[]) => void
 ) => {
     const q = query(
         collection(db, COLLECTION),
@@ -54,37 +54,57 @@ export const subscribeToProjectGroups = (
     );
 
     return onSnapshot(q, (snapshot) => {
-        const groups = snapshot.docs.map(doc => ({
+        const projects = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
-        } as ProjectGroup));
-        callback(groups);
+        } as Project));
+        callback(projects);
     }, (error) => {
-        console.error('Error in project groups subscription:', error);
+        console.error('Error in projects subscription:', error);
     });
 };
 
 /**
- * Get a single project group by ID
+ * Subscribe to a single project
  */
-export const getProjectGroup = async (id: string): Promise<ProjectGroup | null> => {
+export const subscribeToProject = (
+    projectId: string,
+    callback: (project: Project | null) => void
+) => {
+    const docRef = doc(db, COLLECTION, projectId);
+
+    return onSnapshot(docRef, (snapshot) => {
+        if (snapshot.exists()) {
+            callback({ id: snapshot.id, ...snapshot.data() } as Project);
+        } else {
+            callback(null);
+        }
+    }, (error) => {
+        console.error('Error in project subscription:', error);
+    });
+};
+
+/**
+ * Get a single project by ID
+ */
+export const getProject = async (id: string): Promise<Project | null> => {
     try {
         const docRef = doc(db, COLLECTION, id);
         const snapshot = await getDoc(docRef);
         if (snapshot.exists()) {
-            return { id: snapshot.id, ...snapshot.data() } as ProjectGroup;
+            return { id: snapshot.id, ...snapshot.data() } as Project;
         }
         return null;
     } catch (error) {
-        console.error('Error fetching project group:', error);
+        console.error('Error fetching project:', error);
         throw error;
     }
 };
 
 /**
- * Update a project group
+ * Update a project
  */
-export const updateProjectGroup = async (id: string, data: Partial<ProjectGroup>): Promise<void> => {
+export const updateProject = async (id: string, data: Partial<Project>): Promise<void> => {
     try {
         const docRef = doc(db, COLLECTION, id);
         await updateDoc(docRef, {
@@ -92,20 +112,20 @@ export const updateProjectGroup = async (id: string, data: Partial<ProjectGroup>
             updatedAt: serverTimestamp(),
         });
     } catch (error) {
-        console.error('Error updating project group:', error);
+        console.error('Error updating project:', error);
         throw error;
     }
 };
 
 /**
- * Delete a project group
+ * Delete a project
  */
-export const deleteProjectGroup = async (id: string): Promise<void> => {
+export const deleteProject = async (id: string): Promise<void> => {
     try {
         const docRef = doc(db, COLLECTION, id);
         await deleteDoc(docRef);
     } catch (error) {
-        console.error('Error deleting project group:', error);
+        console.error('Error deleting project:', error);
         throw error;
     }
 };

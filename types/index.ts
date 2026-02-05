@@ -16,38 +16,35 @@ export interface Client {
     updatedAt: any;
 }
 
-export interface ProjectGroup {
-    id: string;
-    name: string;
-    clientId: string;
-    createdAt: any;
-    createdBy: string;
-    updatedAt: any;
-}
-
 export interface Project {
     id: string;
     name: string;
-    groupId: string;
-    clientId: string; // Denormalized for easier queries
+    clientId: string;
     boxFolderId?: string;
-    swimlanes?: Swimlane[];
-    statuses?: Status[];
+    statuses?: ProjectStatus[]; // Columns
+    swimlanes?: Swimlane[];     // Rows
     createdAt: any;
     createdBy: string;
     updatedAt: any;
 }
 
-export interface Swimlane {
+
+// Columns (formerly Swimlane)
+export interface ProjectStatus {
     id: string;
-    name: string;
+    projectId: string; // Parent Project ID
+    title: string;
     order: number;
+    color?: string;
 }
 
-export interface Status {
+// Rows (New)
+export interface Swimlane {
     id: string;
-    name: string;
+    projectId: string;
+    title: string;
     order: number;
+    color?: string; // Row header color
 }
 
 export interface Ticket {
@@ -60,9 +57,17 @@ export interface Ticket {
     assigneeId?: string;
     order: number;
     attachments?: Attachment[];
+    comments?: Comment[];
     createdAt: any;
     createdBy: string;
     updatedAt: any;
+}
+
+export interface Comment {
+    id: string;
+    content: string;
+    userId: string;
+    createdAt: any;
 }
 
 export interface Attachment {

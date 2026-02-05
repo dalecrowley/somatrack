@@ -83,7 +83,7 @@ export function ClientList({ clients, isLoading }: ClientListProps) {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {clients.map((client) => (
                     <Card key={client.id} className="group relative overflow-hidden transition-all hover:shadow-md">
-                        <Link href={`/clients/${client.id}/groups`} className="absolute inset-0 z-10">
+                        <Link href={`/clients/${client.id}/projects`} className="absolute inset-0 z-10">
                             <span className="sr-only">View {client.name}</span>
                         </Link>
 
@@ -140,7 +140,7 @@ export function ClientList({ clients, isLoading }: ClientListProps) {
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This action cannot be undone. This will permanently delete the client
-                            and all associated project groups and projects.
+                            and all associated projects.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

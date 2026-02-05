@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ProjectGroup } from '@/types';
-import { useProjectGroups } from '@/hooks/useProjectGroups';
+import { Project } from '@/types';
+import { useProjects } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -15,31 +15,31 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-interface EditProjectGroupDialogProps {
-    group: ProjectGroup | null;
+interface EditProjectDialogProps {
+    project: Project | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     clientId: string;
 }
 
-export function EditProjectGroupDialog({ group, open, onOpenChange, clientId }: EditProjectGroupDialogProps) {
-    const { editGroup } = useProjectGroups(clientId);
+export function EditProjectDialog({ project, open, onOpenChange, clientId }: EditProjectDialogProps) {
+    const { editProject } = useProjects(clientId);
     const [name, setName] = useState('');
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        if (group) {
-            setName(group.name);
+        if (project) {
+            setName(project.name);
         }
-    }, [group, open]);
+    }, [project, open]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!group || !name.trim()) return;
+        if (!project || !name.trim()) return;
 
         setLoading(true);
         try {
-            const success = await editGroup(group.id, { name });
+            const success = await editProject(project.id, { name });
             if (success) {
                 onOpenChange(false);
             }
@@ -53,18 +53,18 @@ export function EditProjectGroupDialog({ group, open, onOpenChange, clientId }: 
             <DialogContent className="sm:max-w-[425px]">
                 <Form onSubmit={handleSubmit}>
                     <DialogHeader>
-                        <DialogTitle>Rename Project Group</DialogTitle>
+                        <DialogTitle>Rename Project</DialogTitle>
                         <DialogDescription>
-                            Update the name of the project group.
+                            Update the name of the project.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-group-name" className="text-right">
+                            <Label htmlFor="edit-project-name" className="text-right">
                                 Name
                             </Label>
                             <Input
-                                id="edit-group-name"
+                                id="edit-project-name"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 className="col-span-3"
