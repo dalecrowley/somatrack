@@ -1,40 +1,110 @@
-'use client';
-
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Attachment } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ExternalLink, Trash2, Plus, Paperclip } from 'lucide-react';
+import { ExternalLink, Trash2, Plus, Paperclip, Upload, Loader2 } from 'lucide-react';
+import { MediaPreview } from './MediaPreview';
 
 interface TicketAttachmentsProps {
     attachments: Attachment[];
     onChange: (attachments: Attachment[]) => void;
+    readOnly?: boolean;
+    projectId: string;
+    ticketId: string;
 }
 
-export function TicketAttachments({ attachments, onChange }: TicketAttachmentsProps) {
+export function TicketAttachments({ attachments, onChange, readOnly, projectId, ticketId }: TicketAttachmentsProps) {
     const [isAdding, setIsAdding] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const [newName, setNewName] = useState('');
     const [newUrl, setNewUrl] = useState('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleAdd = () => {
+    const handleAddLink = () => {
         if (!newName.trim() || !newUrl.trim()) return;
 
         const newAttachment: Attachment = {
-            id: crypto.randomUUID(), // Local ID until creation (or permanent if using this structure)
+            id: crypto.randomUUID(),
             name: newName,
-            type: 'link', // Treating all as links for now
-            url: newUrl, // We need to update the Attachment type to support generic URLs if it doesn't already
-            boxFileId: '',
-            boxSharedLink: newUrl, // Using this field or adding a generic 'url' field
+            type: 'link',
+            url: newUrl,
             uploadedAt: new Date(),
-            uploadedBy: 'user', // Ideally passed from parent
-        } as any; // Casting to satisfy TS if type mismatch, relying on impl details
+            uploadedBy: 'user', // Ideally passed from auth context
+        };
 
         onChange([...attachments, newAttachment]);
         setNewName('');
         setNewUrl('');
         setIsAdding(false);
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        try {
+            // 1. Get Folder ID (Project/Ticket specific)
+            const folderRes = await fetch('/api/box/folder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ projectId, ticketId }),
+            });
+            const { folderId } = await folderRes.json();
+
+            // 2. Get Box Token
+            const tokenRes = await fetch('/api/box/token');
+            const { accessToken } = await tokenRes.json();
+
+            // 3. Upload to Box
+            const formData = new FormData();
+            formData.append('attributes', JSON.stringify({
+                name: file.name,
+                parent: { id: folderId || '0' }
+            }));
+            formData.append('file', file);
+
+            const uploadRes = await fetch('https://upload.box.com/api/2.0/files/content', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+                body: formData,
+            });
+
+            if (!uploadRes.ok) throw new Error('Upload failed');
+            const uploadData = await uploadRes.json();
+            const boxFile = uploadData.entries[0];
+
+            // 3. Finalize on server (generate shared link, etc.)
+            const finalizeRes = await fetch('/api/box/finalize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fileId: boxFile.id }),
+            });
+            const { sharedLink } = await finalizeRes.json();
+
+            // 4. Update parent
+            const fileType = file.type.split('/')[0] as any;
+            const newAttachment: Attachment = {
+                id: crypto.randomUUID(),
+                name: file.name,
+                type: ['image', 'audio', 'video'].includes(fileType) ? fileType : 'other',
+                boxFileId: boxFile.id,
+                boxSharedLink: sharedLink,
+                uploadedAt: new Date(),
+                uploadedBy: 'user',
+            };
+
+            onChange([...attachments, newAttachment]);
+        } catch (error) {
+            console.error('File upload error:', error);
+            // Handle error (e.g., toast)
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
     };
 
     const handleRemove = (id: string) => {
@@ -48,11 +118,29 @@ export function TicketAttachments({ attachments, onChange }: TicketAttachmentsPr
                     <Paperclip className="h-4 w-4" />
                     Attachments ({attachments.length})
                 </h4>
-                {!isAdding && (
-                    <Button onClick={() => setIsAdding(true)} variant="outline" size="sm">
-                        <Plus className="h-3 w-3 mr-2" />
-                        Add Link
-                    </Button>
+                {!readOnly && (
+                    <div className="flex gap-2">
+                        <input
+                            type="file"
+                            className="hidden"
+                            ref={fileInputRef}
+                            onChange={handleFileUpload}
+                            accept="image/*,audio/*,video/*"
+                        />
+                        <Button
+                            onClick={() => fileInputRef.current?.click()}
+                            variant="outline"
+                            size="sm"
+                            disabled={isUploading}
+                        >
+                            {isUploading ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Upload className="h-3 w-3 mr-2" />}
+                            Upload File
+                        </Button>
+                        <Button onClick={() => setIsAdding(true)} variant="ghost" size="sm">
+                            <Plus className="h-3 w-3 mr-2" />
+                            Add Link
+                        </Button>
+                    </div>
                 )}
             </div>
 
@@ -76,39 +164,39 @@ export function TicketAttachments({ attachments, onChange }: TicketAttachmentsPr
                     </div>
                     <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="sm" onClick={() => setIsAdding(false)}>Cancel</Button>
-                        <Button size="sm" onClick={handleAdd} disabled={!newName || !newUrl}>Add</Button>
+                        <Button size="sm" onClick={handleAddLink} disabled={!newName || !newUrl}>Add</Button>
                     </div>
                 </div>
             )}
 
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-4">
                 {attachments.map((att) => (
-                    <div key={att.id} className="flex items-center justify-between p-2 border rounded-md bg-card group">
-                        <div className="flex items-center gap-2 overflow-hidden">
-                            <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
-                            <a
-                                href={att.boxSharedLink || (att as any).url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm font-medium hover:underline truncate"
+                    <div key={att.id} className="relative group">
+                        <MediaPreview attachment={att} />
+                        {!readOnly && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border shadow-sm text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                onClick={() => handleRemove(att.id)}
                             >
-                                {att.name}
-                            </a>
-                        </div>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => handleRemove(att.id)}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                                <Trash2 className="h-3 w-3" />
+                            </Button>
+                        )}
                     </div>
                 ))}
-                {attachments.length === 0 && !isAdding && (
+                {attachments.length === 0 && !isAdding && !isUploading && (
                     <p className="text-sm text-muted-foreground italic text-center py-4">
                         No attachments yet.
                     </p>
+                )}
+                {isUploading && (
+                    <div className="flex items-center justify-center p-8 border border-dashed rounded-md bg-muted/10">
+                        <div className="flex flex-col items-center gap-2">
+                            <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+                            <p className="text-sm text-muted-foreground">Uploading to Box...</p>
+                        </div>
+                    </div>
                 )}
             </div>
         </div>

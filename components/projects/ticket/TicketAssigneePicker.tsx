@@ -14,15 +14,16 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 interface TicketAssigneePickerProps {
     value?: string;
     onValueChange: (value: string) => void;
+    disabled?: boolean;
 }
 
-export function TicketAssigneePicker({ value, onValueChange }: TicketAssigneePickerProps) {
+export function TicketAssigneePicker({ value, onValueChange, disabled }: TicketAssigneePickerProps) {
     const { users, loading } = useUsers();
 
     if (loading) return <div className="h-10 w-full animate-pulse bg-muted rounded-md" />;
 
     return (
-        <Select value={value} onValueChange={onValueChange}>
+        <Select value={value} onValueChange={onValueChange} disabled={disabled}>
             <SelectTrigger>
                 <SelectValue placeholder="Unassigned" />
             </SelectTrigger>

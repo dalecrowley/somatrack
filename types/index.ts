@@ -54,8 +54,9 @@ export interface Ticket {
     projectId: string;
     swimlaneId: string;
     statusId: string;
-    assigneeId?: string;
+    assigneeId?: string | null;
     order: number;
+    boxFolderId?: string;
     attachments?: Attachment[];
     comments?: Comment[];
     createdAt: any;
@@ -73,9 +74,10 @@ export interface Comment {
 export interface Attachment {
     id: string;
     name: string;
-    type: 'image' | 'video' | 'audio';
-    boxFileId: string;
-    boxSharedLink: string;
+    type: 'link' | 'image' | 'video' | 'audio' | 'other';
+    url?: string;
+    boxFileId?: string;
+    boxSharedLink?: string;
     uploadedAt: any;
     uploadedBy: string;
 }

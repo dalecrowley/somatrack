@@ -8,6 +8,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Paperclip, User as UserIcon, MessageSquare } from 'lucide-react';
 import { EditTicketDialog } from './EditTicketDialog';
 import { useUsers } from '@/hooks/useUsers';
+import { Linkify } from '@/components/ui/linkify';
 import { cn } from '@/lib/utils';
 
 interface TicketCardProps {
@@ -57,11 +58,12 @@ export function TicketCard({ ticket, index, color }: TicketCardProps) {
                                         {ticket.title}
                                     </CardTitle>
                                 </CardHeader>
+
                                 <CardContent className="p-3 pt-2">
                                     {ticket.description && (
-                                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                                            {ticket.description}
-                                        </p>
+                                        <div className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                                            <Linkify text={ticket.description} />
+                                        </div>
                                     )}
                                     <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
                                         <span className="text-[10px]">
