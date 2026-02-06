@@ -14,10 +14,11 @@ import { cn } from '@/lib/utils';
 interface TicketCardProps {
     ticket: Ticket;
     index: number;
+    projectName?: string;
     color?: string;
 }
 
-export function TicketCard({ ticket, index, color }: TicketCardProps) {
+export function TicketCard({ ticket, index, projectName, color }: TicketCardProps) {
     const [isEditOpen, setIsEditOpen] = useState(false);
     const { users } = useUsers();
 
@@ -111,6 +112,7 @@ export function TicketCard({ ticket, index, color }: TicketCardProps) {
             <EditTicketDialog
                 ticket={ticket}
                 projectId={ticket.projectId}
+                projectName={projectName}
                 open={isEditOpen}
                 onOpenChange={setIsEditOpen}
             />

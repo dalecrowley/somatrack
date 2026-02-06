@@ -17,6 +17,10 @@ export function MediaPreview({ attachment }: MediaPreviewProps) {
 
     useEffect(() => {
         if (attachment.type === 'audio' && waveformRef.current) {
+            const audioUrl = attachment.boxFileId
+                ? `/api/box/content/${attachment.boxFileId}`
+                : (attachment.boxSharedLink || attachment.url);
+
             wavesurfer.current = WaveSurfer.create({
                 container: waveformRef.current,
                 waveColor: '#4f46e5',
@@ -25,7 +29,7 @@ export function MediaPreview({ attachment }: MediaPreviewProps) {
                 barWidth: 2,
                 barRadius: 3,
                 height: 40,
-                url: attachment.boxSharedLink || attachment.url,
+                url: audioUrl,
             });
 
             wavesurfer.current.on('play', () => setIsPlaying(true));
@@ -42,11 +46,15 @@ export function MediaPreview({ attachment }: MediaPreviewProps) {
         wavesurfer.current?.playPause();
     };
 
-    if (attachment.type === 'image') {
+    if (attachment.type === 'image' || attachment.type === 'document') {
+        const imageUrl = attachment.boxFileId
+            ? `/api/box/thumbnail/${attachment.boxFileId}`
+            : (attachment.boxSharedLink || attachment.url);
+
         return (
             <div className="relative group rounded-md overflow-hidden border bg-muted/50 aspect-video flex items-center justify-center">
                 <img
-                    src={attachment.boxSharedLink || attachment.url}
+                    src={imageUrl}
                     alt={attachment.name}
                     className="max-h-full max-w-full object-contain"
                 />
@@ -63,13 +71,21 @@ export function MediaPreview({ attachment }: MediaPreviewProps) {
     }
 
     if (attachment.type === 'video') {
+        const videoUrl = attachment.boxFileId
+            ? `/api/box/content/${attachment.boxFileId}`
+            : (attachment.boxSharedLink || attachment.url);
+
+        const posterUrl = attachment.boxFileId
+            ? `/api/box/thumbnail/${attachment.boxFileId}`
+            : '';
+
         return (
             <div className="rounded-md overflow-hidden border bg-black aspect-video flex items-center justify-center">
                 <video
-                    src={attachment.boxSharedLink || attachment.url}
+                    src={videoUrl}
                     controls
                     className="max-h-full max-w-full"
-                    poster="" // Optional: Add a poster if we can generate thumbnails
+                    poster={posterUrl}
                 />
             </div>
         );

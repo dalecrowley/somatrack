@@ -47,6 +47,30 @@ export class BoxService {
     }
 
     /**
+     * Upload a file to a specific Box folder.
+     */
+    public async uploadFile(buffer: Buffer, fileName: string, folderId: string): Promise<any> {
+        try {
+            const { generateByteStreamFromBuffer } = require('box-node-sdk/lib/internal/utilsNode');
+            const stream = generateByteStreamFromBuffer(buffer);
+
+            const boxFile = await this.client.uploads.uploadFile({
+                attributes: {
+                    name: fileName,
+                    parent: { id: folderId }
+                },
+                file: stream,
+                fileFileName: fileName
+            });
+
+            return boxFile.entries?.[0];
+        } catch (error: any) {
+            console.error(`Error uploading file ${fileName} to folder ${folderId}:`, error);
+            throw error;
+        }
+    }
+
+    /**
      * Create a folder for a project if it doesn't exist.
      */
     public async getOrCreateProjectFolder(projectName: string, parentFolderId: string = '0'): Promise<string> {
@@ -69,6 +93,61 @@ export class BoxService {
             console.error(`Error in getOrCreateProjectFolder for ${projectName}:`, error);
             throw error;
         }
+    }
+
+    /**
+     * Get a file's raw content stream.
+     */
+    public async downloadFile(fileId: string, range?: string): Promise<any> {
+        try {
+            return await this.client.downloads.downloadFile(fileId, {
+                headers: { range }
+            });
+        } catch (error: any) {
+            console.error(`Error downloading file ${fileId}:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get a thumbnail for a file.
+     */
+    public async getFileThumbnail(fileId: string): Promise<any> {
+        const maxRetries = 5;
+        let delay = 1000;
+
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                const stream = await this.client.files.getFileThumbnailById(fileId, 'png', {
+                    queryParams: {
+                        maxHeight: 256,
+                        maxWidth: 256
+                    }
+                });
+
+                if (stream) return stream;
+                await new Promise(resolve => setTimeout(resolve, delay));
+            } catch (error: any) {
+                if (error.status === 202 || error.status === 400 || error.message?.includes('202') || error.message?.includes('400')) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    console.error(`❌ Box SDK error getting thumbnail for ${fileId}:`, error);
+                    break;
+                }
+            }
+            delay += 1000;
+        }
+
+        try {
+            const url = await this.client.files.getFileThumbnailUrl(fileId, 'png', {
+                queryParams: { maxHeight: 256, maxWidth: 256 }
+            });
+            if (url) return { type: 'redirect', url };
+        } catch (e) {
+            // Silently fail fallback
+        }
+
+        return null;
     }
 
     /**

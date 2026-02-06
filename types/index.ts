@@ -74,7 +74,7 @@ export interface Comment {
 export interface Attachment {
     id: string;
     name: string;
-    type: 'link' | 'image' | 'video' | 'audio' | 'other';
+    type: 'link' | 'image' | 'video' | 'audio' | 'document' | 'other';
     url?: string;
     boxFileId?: string;
     boxSharedLink?: string;

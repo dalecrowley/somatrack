@@ -11,10 +11,11 @@ interface TicketAttachmentsProps {
     onChange: (attachments: Attachment[]) => void;
     readOnly?: boolean;
     projectId: string;
+    projectName?: string;
     ticketId: string;
 }
 
-export function TicketAttachments({ attachments, onChange, readOnly, projectId, ticketId }: TicketAttachmentsProps) {
+export function TicketAttachments({ attachments, onChange, readOnly, projectId, projectName, ticketId }: TicketAttachmentsProps) {
     const [isAdding, setIsAdding] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [newName, setNewName] = useState('');
@@ -44,53 +45,86 @@ export function TicketAttachments({ attachments, onChange, readOnly, projectId, 
         if (!file) return;
 
         setIsUploading(true);
+        console.log('🚀 Starting upload for:', file.name, { projectId, ticketId });
         try {
             // 1. Get Folder ID (Project/Ticket specific)
+            console.log('⏳ Getting folder ID...');
             const folderRes = await fetch('/api/box/folder', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectId, ticketId }),
+                body: JSON.stringify({ projectId, ticketId, projectName }),
             });
+
+            if (!folderRes.ok) {
+                const err = await folderRes.json().catch(() => ({ error: 'Unknown error' }));
+                console.error('❌ Folder API failed:', err);
+                throw new Error(`Folder API failed: ${err.error}`);
+            }
+
             const { folderId } = await folderRes.json();
+            console.log('✅ Got folder ID:', folderId);
 
-            // 2. Get Box Token
-            const tokenRes = await fetch('/api/box/token');
-            const { accessToken } = await tokenRes.json();
-
-            // 3. Upload to Box
+            // 2. Upload to Box via our server proxy
+            console.log('⏳ Uploading to proxy...');
             const formData = new FormData();
-            formData.append('attributes', JSON.stringify({
-                name: file.name,
-                parent: { id: folderId || '0' }
-            }));
             formData.append('file', file);
+            formData.append('folderId', folderId || '0');
 
-            const uploadRes = await fetch('https://upload.box.com/api/2.0/files/content', {
+            const uploadRes = await fetch('/api/box/upload', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                },
                 body: formData,
             });
 
-            if (!uploadRes.ok) throw new Error('Upload failed');
-            const uploadData = await uploadRes.json();
-            const boxFile = uploadData.entries[0];
+            if (!uploadRes.ok) {
+                const err = await uploadRes.json().catch(() => ({ error: 'Unknown error' }));
+                console.error('❌ Upload API failed:', err);
+                throw new Error(`Upload API failed: ${err.error}`);
+            }
+
+            const boxFile = await uploadRes.json();
+            console.log('✅ Uploaded to Box:', boxFile.id);
 
             // 3. Finalize on server (generate shared link, etc.)
+            console.log('⏳ Finalizing...');
             const finalizeRes = await fetch('/api/box/finalize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ fileId: boxFile.id }),
             });
+
+            if (!finalizeRes.ok) {
+                console.error('❌ Finalize API failed');
+                throw new Error('Finalize API failed');
+            }
+
             const { sharedLink } = await finalizeRes.json();
+            console.log('✅ Finalized with shared link:', sharedLink);
 
             // 4. Update parent
-            const fileType = file.type.split('/')[0] as any;
+            const mimeType = file.type;
+            const fileName = file.name.toLowerCase();
+            const mainType = mimeType.split('/')[0];
+
+            let finalType: Attachment['type'] = 'other';
+            if (['image', 'audio', 'video'].includes(mainType)) {
+                finalType = mainType as any;
+            } else if (
+                mimeType === 'application/pdf' ||
+                fileName.endsWith('.pdf') ||
+                fileName.endsWith('.doc') ||
+                fileName.endsWith('.docx') ||
+                fileName.endsWith('.xls') ||
+                fileName.endsWith('.xlsx') ||
+                fileName.endsWith('.ppt') ||
+                fileName.endsWith('.pptx')
+            ) {
+                finalType = 'document';
+            }
+
             const newAttachment: Attachment = {
                 id: crypto.randomUUID(),
                 name: file.name,
-                type: ['image', 'audio', 'video'].includes(fileType) ? fileType : 'other',
+                type: finalType,
                 boxFileId: boxFile.id,
                 boxSharedLink: sharedLink,
                 uploadedAt: new Date(),
@@ -98,9 +132,10 @@ export function TicketAttachments({ attachments, onChange, readOnly, projectId, 
             };
 
             onChange([...attachments, newAttachment]);
-        } catch (error) {
-            console.error('File upload error:', error);
-            // Handle error (e.g., toast)
+            console.log('✨ All done!');
+        } catch (error: any) {
+            console.error('‼️ File upload error:', error);
+            alert(`Upload failed: ${error.message || 'Check console for details'}`);
         } finally {
             setIsUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';

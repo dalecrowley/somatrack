@@ -34,11 +34,12 @@ import {
 interface EditTicketDialogProps {
     ticket: Ticket;
     projectId: string;
+    projectName?: string;
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }
 
-export function EditTicketDialog({ ticket, projectId, open, onOpenChange }: EditTicketDialogProps) {
+export function EditTicketDialog({ ticket, projectId, projectName, open, onOpenChange }: EditTicketDialogProps) {
     const { editTicket, removeTicket } = useTickets(projectId);
     const [title, setTitle] = useState(ticket.title);
     const [description, setDescription] = useState(ticket.description);
@@ -191,6 +192,7 @@ export function EditTicketDialog({ ticket, projectId, open, onOpenChange }: Edit
                                 onChange={isEditing ? setAttachments : () => { }}
                                 readOnly={!isEditing}
                                 projectId={projectId}
+                                projectName={projectName}
                                 ticketId={ticket.id}
                             />
                         </TabsContent>
