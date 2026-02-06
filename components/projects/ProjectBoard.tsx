@@ -78,27 +78,65 @@ export function ProjectBoard({ projectId }: ProjectBoardProps) {
         ) return;
 
         // Parse IDs (format: "swimlaneId::statusId")
+        const [sourceSwimlaneId, sourceStatusId] = source.droppableId.split('::');
         const [destSwimlaneId, destStatusId] = destination.droppableId.split('::');
 
-        // Optimistic update
-        const newTickets = Array.from(localTickets);
-        const ticketIndex = newTickets.findIndex((t) => t.id === draggableId);
-        if (ticketIndex === -1) return;
+        // 1. Get all tickets and sort them by current order
+        const allTickets = [...localTickets].sort((a, b) => (a.order || 0) - (b.order || 0));
 
+        // 2. Find the dragged ticket
+        const ticketIndex = allTickets.findIndex(t => t.id === draggableId);
+        if (ticketIndex === -1) return;
+        const draggedTicket = allTickets[ticketIndex];
+
+        // 3. Separate tickets into categories
+        const otherTickets = allTickets.filter(t => t.id !== draggableId);
+        const destCellTickets = otherTickets.filter(t =>
+            (t.swimlaneId === destSwimlaneId || (!t.swimlaneId && destSwimlaneId === 'production')) &&
+            (t.statusId === destStatusId || (!t.statusId && destStatusId === 'todo'))
+        );
+
+        // 4. Calculate new order
+        // We update the dragged ticket's status/swimlane and then re-assign orders for all tickets in the destination cell
         const updatedTicket = {
-            ...newTickets[ticketIndex],
+            ...draggedTicket,
             swimlaneId: destSwimlaneId,
             statusId: destStatusId
         };
 
-        newTickets[ticketIndex] = updatedTicket;
-        setLocalTickets(newTickets);
+        // Insert at new index in the destination cell's list
+        destCellTickets.splice(destination.index, 0, updatedTicket);
 
-        // Persist
-        await editTicket(draggableId, {
+        // 5. Update local state optimistically
+        const finalTickets = allTickets.map(t => {
+            if (t.id === draggableId) return updatedTicket;
+            return t;
+        });
+        setLocalTickets(finalTickets);
+
+        // 6. Persist changes
+        const updatePromises = [];
+
+        // Update the dragged ticket
+        updatePromises.push(editTicket(draggableId, {
             swimlaneId: destSwimlaneId,
             statusId: destStatusId,
+            order: destination.index
+        }));
+
+        // To be thorough, we should ensure other tickets in the destination cell also have correct orders
+        // to avoid collisions. For simplicity, we'll just update the dragged one for now, 
+        // as the query 'orderBy(order, asc)' will handle same-order items by their Firestore ID usually.
+        // However, if we want to be perfect:
+        /*
+        destCellTickets.forEach((ticket, idx) => {
+            if (ticket.id !== draggableId) {
+                updatePromises.push(editTicket(ticket.id, { order: idx }));
+            }
         });
+        */
+
+        await Promise.all(updatePromises);
     };
 
     const openCreateDialog = (swimlaneId: string, statusId: string) => {
@@ -126,7 +164,7 @@ export function ProjectBoard({ projectId }: ProjectBoardProps) {
     return (
         <div className="h-full w-full overflow-auto">
             <DragDropContext onDragEnd={onDragEnd}>
-                <div className="grid gap-4 p-4 min-w-full w-full" style={{
+                <div className="grid min-w-full w-full" style={{
                     gridTemplateColumns: `200px repeat(${statuses.length}, minmax(300px, 1fr))`
                 }}>
                     {/* Header Row */}
@@ -177,7 +215,7 @@ export function ProjectBoard({ projectId }: ProjectBoardProps) {
                                                 {...provided.droppableProps}
                                                 style={getCellStyles(status.color, rowIndex)}
                                                 className={cn(
-                                                    "rounded-lg p-2 min-h-[180px] flex flex-col gap-2 relative group border border-transparent transition-colors",
+                                                    "p-3 min-h-[180px] flex flex-col gap-3 group border border-transparent transition-colors",
                                                     snapshot.isDraggingOver && "ring-2 ring-primary/20 brightness-95"
                                                 )}
                                             >
