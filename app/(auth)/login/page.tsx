@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { signInWithGoogle } from '@/lib/firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,10 +33,12 @@ export default function LoginPage() {
         <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
             <Card className="w-full max-w-md shadow-xl">
                 <CardHeader className="space-y-3 text-center">
-                    <div className="mx-auto mb-2">
-                        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
-                            ST
-                        </div>
+                    <div className="mx-auto mb-4">
+                        <img
+                            src="/Somatrackblack.png"
+                            alt="SomaTrack Logo"
+                            className="h-16 w-auto object-contain mx-auto rounded"
+                        />
                     </div>
                     <CardTitle className="text-3xl font-bold">SomaTrack</CardTitle>
                     <CardDescription className="text-base">

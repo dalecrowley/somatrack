@@ -210,7 +210,7 @@ export function EditTicketDialog({ ticket, projectId, projectName, open, onOpenC
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
-                className="sm:max-w-[1000px] h-[90vh] flex flex-col p-0 gap-0 overflow-hidden border-none shadow-2xl"
+                className="md:max-w-[75vw] w-[95vw] h-[90vh] flex flex-col p-0 gap-0 overflow-hidden border-none shadow-2xl transition-all duration-300"
                 showCloseButton={false}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}

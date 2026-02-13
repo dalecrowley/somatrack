@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { signOut } from '@/lib/firebase/auth';
 import {
@@ -18,6 +19,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 export default function Header() {
     const user = useAuthStore((state) => state.user);
     const router = useRouter();
+    const pathname = usePathname();
+
+    const isDashboard = pathname === '/dashboard';
+    // Using the black version for better visibility on white backgrounds
+    const logoSrc = '/Somatrackblack.png';
 
     const handleSignOut = async () => {
         try {
@@ -43,10 +49,11 @@ export default function Header() {
             <div className="container flex h-14 items-center">
                 <div className="mr-4 flex">
                     <Link href="/dashboard" className="mr-6 flex items-center space-x-2">
-                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
-                            ST
-                        </div>
-                        <span className="hidden font-bold sm:inline-block">SomaTrack</span>
+                        <img
+                            src={logoSrc}
+                            alt="SomaTrack"
+                            className="h-8 w-auto object-contain"
+                        />
                     </Link>
                     <nav className="flex items-center space-x-6 text-sm font-medium">
                         <Link
