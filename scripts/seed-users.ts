@@ -31,14 +31,18 @@ if (getApps().length === 0) {
 
 const db = getFirestore();
 
-// Initial team members
+// Initial team members with placeholder avatars
 const seedUsers = [
-    { email: 'dale@somatone.com', displayName: 'Dale', role: 'admin' },
-    { email: 'john@somatone.com', displayName: 'John', role: 'member' },
-    { email: 'marika@somatone.com', displayName: 'Marika', role: 'member' },
-    { email: 'saul@somatone.com', displayName: 'Saul', role: 'member' },
-    { email: 'raul@somatone.com', displayName: 'Raul', role: 'member' },
-    { email: 'michael@somatone.com', displayName: 'Michael', role: 'member' },
+    { email: 'dale@somatone.com', displayName: 'Dale Crowley', role: 'admin', photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Dale' },
+    { email: 'john@somatone.com', displayName: 'John Smith', role: 'member', photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John' },
+    { email: 'marika@somatone.com', displayName: 'Marika Johnson', role: 'member', photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Marika' },
+    { email: 'saul@somatone.com', displayName: 'Saul Williams', role: 'member', photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Saul' },
+    { email: 'raul@somatone.com', displayName: 'Raul Martinez', role: 'member', photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Raul' },
+    { email: 'michael@somatone.com', displayName: 'Michael Scott', role: 'member', photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Michael' },
+    { email: 'sarah@somatone.com', displayName: 'Sarah Chen', role: 'member', photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah' },
+    { email: 'alex@somatone.com', displayName: 'Alex Rodriguez', role: 'member', photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex' },
+    { email: 'emma@somatone.com', displayName: 'Emma Davis', role: 'member', photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emma' },
+    { email: 'james@somatone.com', displayName: 'James Wilson', role: 'member', photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=James' },
 ];
 
 async function seedDatabase() {
@@ -54,9 +58,10 @@ async function seedDatabase() {
             const userId = user.email.replace('@somatone.com', '').replace(/\./g, '_');
 
             await db.collection('users').doc(userId).set({
+                uid: userId,
                 email: user.email,
                 displayName: user.displayName,
-                photoURL: null,
+                photoURL: user.photoURL || null,
                 role: user.role,
                 createdAt: new Date(),
                 lastLogin: null,

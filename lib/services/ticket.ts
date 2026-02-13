@@ -2,6 +2,7 @@ import {
     collection,
     doc,
     addDoc,
+    setDoc,
     updateDoc,
     deleteDoc,
     getDocs,
@@ -41,22 +42,44 @@ export const subscribeToTickets = (
 };
 
 /**
+ * Sanitizes data for Firestore by converting undefined to null
+ */
+const sanitizeData = (data: any) => {
+    const sanitized = { ...data };
+    Object.keys(sanitized).forEach(key => {
+        if (sanitized[key] === undefined) {
+            sanitized[key] = null;
+        }
+    });
+    return sanitized;
+};
+
+/**
  * Create a new ticket
  */
 export const createTicket = async (
     projectId: string,
     data: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>,
-    userId: string
+    userId: string,
+    ticketId?: string
 ): Promise<string> => {
     try {
         const ticketsRef = collection(db, 'projects', projectId, 'tickets');
-        const docRef = await addDoc(ticketsRef, {
-            ...data,
+        const ticketData = {
+            ...sanitizeData(data),
             createdBy: userId,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-        });
-        return docRef.id;
+        };
+
+        if (ticketId) {
+            const docRef = doc(ticketsRef, ticketId);
+            await setDoc(docRef, ticketData);
+            return ticketId;
+        } else {
+            const docRef = await addDoc(ticketsRef, ticketData);
+            return docRef.id;
+        }
     } catch (error) {
         console.error('Error creating ticket:', error);
         throw error;
@@ -74,7 +97,7 @@ export const updateTicket = async (
     try {
         const ticketRef = doc(db, 'projects', projectId, 'tickets', ticketId);
         await updateDoc(ticketRef, {
-            ...data,
+            ...sanitizeData(data),
             updatedAt: serverTimestamp(),
         });
     } catch (error) {

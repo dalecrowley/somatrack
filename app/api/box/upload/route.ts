@@ -20,9 +20,15 @@ export async function POST(req: NextRequest) {
         });
     } catch (error: any) {
         console.error('API Upload error:', error);
+
+        // Try to extract more details from Box error if available
+        const details = error.response?.body?.message || error.message;
+        const code = error.response?.body?.code || error.code;
+
         return NextResponse.json({
             error: 'Upload failed',
-            details: error.message
-        }, { status: 500 });
+            details: details,
+            code: code
+        }, { status: error.status || 500 });
     }
 }

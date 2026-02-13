@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DescriptionEditor } from '@/components/ui/description-editor';
 
 interface EditProjectDialogProps {
     project: Project | null;
@@ -25,11 +26,13 @@ interface EditProjectDialogProps {
 export function EditProjectDialog({ project, open, onOpenChange, clientId }: EditProjectDialogProps) {
     const { editProject } = useProjects(clientId);
     const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (project) {
             setName(project.name);
+            setDescription(project.description || '');
         }
     }, [project, open]);
 
@@ -39,7 +42,10 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
 
         setLoading(true);
         try {
-            const success = await editProject(project.id, { name });
+            const success = await editProject(project.id, {
+                name,
+                description
+            });
             if (success) {
                 onOpenChange(false);
             }
@@ -50,7 +56,7 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[700px]">
                 <Form onSubmit={handleSubmit}>
                     <DialogHeader>
                         <DialogTitle>Rename Project</DialogTitle>
@@ -72,6 +78,20 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
                                 required
                             />
                         </div>
+                        {project && (
+                            <div className="flex flex-col gap-3">
+                                <Label htmlFor="edit-project-description">
+                                    Description
+                                </Label>
+                                <DescriptionEditor
+                                    content={description}
+                                    onChange={setDescription}
+                                    projectId={project.id}
+                                    projectName={project.name}
+                                    placeholder="Add project overview, goals, etc..."
+                                />
+                            </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button type="submit" disabled={loading || !name.trim()}>

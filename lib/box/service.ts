@@ -50,10 +50,29 @@ export class BoxService {
      * Upload a file to a specific Box folder.
      */
     public async uploadFile(buffer: Buffer, fileName: string, folderId: string): Promise<any> {
-        try {
-            const { generateByteStreamFromBuffer } = require('box-node-sdk/lib/internal/utilsNode');
-            const stream = generateByteStreamFromBuffer(buffer);
+        const { generateByteStreamFromBuffer } = require('box-node-sdk/lib/internal/utilsNode');
 
+        try {
+            // 1. Check if file exists in the folder to support versioning
+            const items = await this.client.folders.getFolderItems(folderId, {
+                queryParams: { fields: ['name', 'id'], limit: 1000 }
+            });
+
+            const existingFile = items.entries?.find((item: any) => item.type === 'file' && item.name === fileName);
+
+            if (existingFile) {
+                console.log(`ℹ️ File ${fileName} already exists (ID: ${existingFile.id}). Uploading new version...`);
+                const stream = generateByteStreamFromBuffer(buffer);
+                const version = await this.client.uploads.uploadFileVersion(existingFile.id, {
+                    attributes: { name: fileName },
+                    file: stream,
+                    fileFileName: fileName
+                });
+                return version.entries?.[0];
+            }
+
+            // 2. Upload as a new file if it doesn't exist
+            const stream = generateByteStreamFromBuffer(buffer);
             const boxFile = await this.client.uploads.uploadFile({
                 attributes: {
                     name: fileName,
@@ -65,6 +84,43 @@ export class BoxService {
 
             return boxFile.entries?.[0];
         } catch (error: any) {
+            const errorCode = error.response?.body?.code || error.code;
+            const isReserved = errorCode === 'name_temporarily_reserved';
+            const isCollision = errorCode === 'item_name_in_use' || error.status === 409 || error.statusCode === 409 || error.response?.status === 409;
+
+            if (isReserved) {
+                console.log(`⏳ Name temporarily reserved for ${fileName}, waiting 3s to retry...`);
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                return this.uploadFile(buffer, fileName, folderId);
+            }
+
+            if (isCollision) {
+                console.log(`ℹ️ Collision detected for ${fileName}, searching for file ID to version...`);
+
+                // Try to find the file ID directly by listing items in folder
+                const items = await this.client.folders.getFolderItems(folderId, {
+                    queryParams: { fields: ['name', 'id'], limit: 1000 }
+                });
+
+                const file = items.entries?.find((item: any) => item.type === 'file' && item.name === fileName);
+
+                if (file) {
+                    console.log(`✅ Found existing file ${fileName} (ID: ${file.id}). Uploading version...`);
+                    const stream = generateByteStreamFromBuffer(buffer);
+                    const version = await this.client.uploads.uploadFileVersion(file.id, {
+                        attributes: { name: fileName },
+                        file: stream,
+                        fileFileName: fileName
+                    });
+                    return version.entries?.[0];
+                }
+
+                // If still not found, wait and retry the whole process once
+                console.log(`⚠️ File not found in listing, waiting 2s and retrying check...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                return this.uploadFile(buffer, fileName, folderId);
+            }
+
             console.error(`Error uploading file ${fileName} to folder ${folderId}:`, error);
             throw error;
         }
@@ -73,10 +129,13 @@ export class BoxService {
     /**
      * Create a folder for a project if it doesn't exist.
      */
-    public async getOrCreateProjectFolder(projectName: string, parentFolderId: string = '0'): Promise<string> {
+    public async getOrCreateProjectFolder(projectName: string, parentFolderId?: string): Promise<string> {
         try {
+            // Use provided parent, or default to root from env, or fallback to '0'
+            const effectiveParentId = parentFolderId || process.env.BOX_ROOT_FOLDER_ID || '0';
+
             // Check if folder already exists
-            const items = await this.client.folders.getFolderItems(parentFolderId, {
+            const items = await this.client.folders.getFolderItems(effectiveParentId, {
                 queryParams: { fields: ['name', 'id'] },
             });
 
@@ -86,7 +145,7 @@ export class BoxService {
             // Create new folder
             const newFolder = await this.client.folders.createFolder({
                 name: projectName,
-                parent: { id: parentFolderId },
+                parent: { id: effectiveParentId },
             });
             return newFolder.id;
         } catch (error: any) {

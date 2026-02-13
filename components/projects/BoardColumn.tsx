@@ -42,6 +42,7 @@ export function BoardColumn({ id, title, tickets, projectId, color }: BoardColum
                                         ticket={ticket}
                                         index={index}
                                         color={color}
+                                        statusLabel={title}
                                     />
                                 ))}
                                 {provided.placeholder}

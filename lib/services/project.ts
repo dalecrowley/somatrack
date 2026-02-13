@@ -102,13 +102,26 @@ export const getProject = async (id: string): Promise<Project | null> => {
 };
 
 /**
+ * Sanitizes data for Firestore by converting undefined to null
+ */
+const sanitizeData = (data: any) => {
+    const sanitized = { ...data };
+    Object.keys(sanitized).forEach(key => {
+        if (sanitized[key] === undefined) {
+            sanitized[key] = null;
+        }
+    });
+    return sanitized;
+};
+
+/**
  * Update a project
  */
 export const updateProject = async (id: string, data: Partial<Project>): Promise<void> => {
     try {
         const docRef = doc(db, COLLECTION, id);
         await updateDoc(docRef, {
-            ...data,
+            ...sanitizeData(data),
             updatedAt: serverTimestamp(),
         });
     } catch (error) {

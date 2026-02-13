@@ -124,8 +124,13 @@ export function ProjectList({ projects, isLoading, clientId }: ProjectListProps)
                                     </DropdownMenu>
                                 </div>
                             </div>
-                            <CardDescription>
-                                Created {project.createdAt ? formatDistanceToNow(project.createdAt.toDate(), { addSuffix: true }) : 'recently'}
+                            <CardDescription className="flex flex-col gap-1">
+                                <span>Created {project.createdAt ? formatDistanceToNow(project.createdAt.toDate(), { addSuffix: true }) : 'recently'}</span>
+                                {project.description && (
+                                    <span className="text-xs line-clamp-2 opacity-70 mt-1">
+                                        {project.description.replace(/<[^>]*>/g, '')}
+                                    </span>
+                                )}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>

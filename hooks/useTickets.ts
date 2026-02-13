@@ -31,10 +31,10 @@ export const useTickets = (projectId?: string) => {
         return () => unsubscribe();
     }, [projectId]);
 
-    const addTicket = async (data: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>, userId: string) => {
+    const addTicket = async (data: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>, userId: string, ticketId?: string) => {
         if (!projectId) return false;
         try {
-            await createTicket(projectId, data, userId);
+            await createTicket(projectId, data, userId, ticketId);
             return true;
         } catch (err: any) {
             setError(err.message || 'Failed to create ticket');

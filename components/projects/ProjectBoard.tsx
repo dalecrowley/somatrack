@@ -226,6 +226,7 @@ export function ProjectBoard({ projectId }: ProjectBoardProps) {
                                                         index={index}
                                                         projectName={project?.name}
                                                         color={status.color} // Use Status Color for Ticket accent
+                                                        statusLabel={status.title}
                                                     />
                                                 ))}
                                                 {provided.placeholder}

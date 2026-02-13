@@ -21,6 +21,7 @@ export interface Project {
     name: string;
     clientId: string;
     boxFolderId?: string;
+    description?: string;
     statuses?: ProjectStatus[]; // Columns
     swimlanes?: Swimlane[];     // Rows
     createdAt: any;
@@ -54,7 +55,9 @@ export interface Ticket {
     projectId: string;
     swimlaneId: string;
     statusId: string;
-    assigneeId?: string | null;
+    assigneeId?: string | null; // Legacy single assignee (keeping for backward compatibility)
+    assigneeIds?: string[]; // New: Multiple assignees
+    dueDate?: any; // Firestore Timestamp or Date
     order: number;
     boxFolderId?: string;
     attachments?: Attachment[];
