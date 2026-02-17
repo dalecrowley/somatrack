@@ -31,10 +31,10 @@ export const useProjects = (clientId?: string) => {
         return () => unsubscribe();
     }, [clientId]);
 
-    const addProject = async (name: string, userId: string) => {
+    const addProject = async (name: string, userId: string, logoUrl?: string, logoUseDarkBackground?: boolean) => {
         if (!clientId) return false;
         try {
-            await createProject(name, clientId, userId);
+            await createProject(name, clientId, userId, logoUrl, logoUseDarkBackground);
             return true;
         } catch (err: any) {
             setError(err.message || 'Failed to create project');

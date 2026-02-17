@@ -17,6 +17,8 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+import { ArchivedTicketsDialog } from '@/components/projects/ArchivedTicketsDialog';
+
 export default function ProjectPage() {
     const params = useParams();
     const clientId = params.clientId as string;
@@ -62,16 +64,36 @@ export default function ProjectPage() {
                             Clients
                         </Link>
                         <ChevronRight className="mx-2 h-4 w-4" />
-                        <Link href={`/clients/${clientId}/projects`} className="hover:text-foreground transition-colors">
+                        <Link href={`/clients/${clientId}/projects`} className="hover:text-foreground transition-colors flex items-center gap-1.5">
+                            {client?.logoUrl && (
+                                <img src={client.logoUrl} alt="" className="h-3.5 w-3.5 object-contain" />
+                            )}
                             {client?.name || 'Loading...'}
                         </Link>
                         <ChevronRight className="mx-2 h-4 w-4" />
                         <span className="font-medium text-foreground">{project.name}</span>
                     </div>
-                    <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+                    <div className="flex items-center gap-4">
+                        {(project.logoUrl || client?.logoUrl) && (
+                            <div className={`h-12 w-fit px-4 py-2 rounded-lg border border-muted-foreground/10 flex items-center justify-center transition-colors ${(project.logoUrl ? project.logoUseDarkBackground : client?.logoUseDarkBackground) ? 'bg-zinc-900 border-zinc-800' : 'bg-white/50'
+                                }`}>
+                                <img
+                                    src={project.logoUrl || client?.logoUrl}
+                                    alt={`${project.logoUrl ? project.name : client?.name} logo`}
+                                    className="h-full w-auto object-contain max-h-[90%] max-w-[95%]"
+                                />
+                            </div>
+                        )}
+                        <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <ArchivedTicketsDialog
+                        projectId={projectId}
+                        projectName={project.name}
+                    />
+
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">

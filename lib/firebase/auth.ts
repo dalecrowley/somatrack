@@ -1,12 +1,19 @@
 import {
     signInWithPopup,
-    GoogleAuthProvider,
     signOut as firebaseSignOut,
     onAuthStateChanged,
+    setPersistence,
+    browserLocalPersistence,
+    GoogleAuthProvider,
     User,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './config';
+
+// Set persistence to local (survives browser restart)
+setPersistence(auth, browserLocalPersistence).catch((err) => {
+    console.error('Failed to set auth persistence:', err);
+});
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -18,15 +25,13 @@ const ALLOWED_DOMAIN = process.env.NEXT_PUBLIC_ALLOWED_DOMAIN || 'somatone.com';
  */
 export const signInWithGoogle = async () => {
     try {
-        console.log('Starting Google Sign-In...');
+        console.log('Starting Google Sign-In with popup...');
         const result = await signInWithPopup(auth, googleProvider);
         const user = result.user;
         console.log('Google Sign-In successful. User:', user.email);
 
         // Check if email domain is allowed
         const emailDomain = user.email?.split('@')[1];
-        console.log('Checking domain:', emailDomain);
-
         if (emailDomain !== ALLOWED_DOMAIN) {
             console.error('Domain mismatch. Allowed:', ALLOWED_DOMAIN, 'Got:', emailDomain);
             await firebaseSignOut(auth);
@@ -34,17 +39,13 @@ export const signInWithGoogle = async () => {
         }
 
         // Create or update user document in Firestore
-        console.log('Updating Firestore user document...');
         await createOrUpdateUser(user);
-        console.log('Firestore update complete.');
-
         return user;
     } catch (error: any) {
-        console.error('Error signing in with Google:', error);
+        console.error('Error signing in with Google popup:', error);
 
-        // Better error messages
         if (error.code === 'auth/popup-blocked') {
-            throw new Error('Popup was blocked by your browser. Please allow popups for this site and try again.');
+            throw new Error('Sign-in popup was blocked by your browser. Please allow popups for this site.');
         }
         if (error.code === 'auth/popup-closed-by-user') {
             throw new Error('Sign-in cancelled. Please try again.');
@@ -53,6 +54,7 @@ export const signInWithGoogle = async () => {
         throw error;
     }
 };
+
 
 /**
  * Sign out the current user

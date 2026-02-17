@@ -328,6 +328,7 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
                         <Button
                             variant="ghost"
                             size="icon"
+                            tabIndex={-1}
                             className={cn("h-7 w-7", editor.isActive('bold') ? 'bg-muted' : '')}
                             onClick={() => editor.chain().focus().toggleBold().run()}
                             title="Bold"
@@ -337,6 +338,7 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
                         <Button
                             variant="ghost"
                             size="icon"
+                            tabIndex={-1}
                             className={cn("h-7 w-7", editor.isActive('italic') ? 'bg-muted' : '')}
                             onClick={() => editor.chain().focus().toggleItalic().run()}
                             title="Italic"
@@ -346,6 +348,7 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
                         <Button
                             variant="ghost"
                             size="icon"
+                            tabIndex={-1}
                             className={cn("h-7 w-7", editor.isActive('strike') ? 'bg-muted' : '')}
                             onClick={() => editor.chain().focus().toggleStrike().run()}
                             title="Strike"
@@ -356,6 +359,7 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
                         <Button
                             variant="ghost"
                             size="icon"
+                            tabIndex={-1}
                             className={cn("h-7 w-7", editor.isActive('bulletList') ? 'bg-muted' : '')}
                             onClick={() => editor.chain().focus().toggleBulletList().run()}
                             title="Bullet List"
@@ -365,6 +369,7 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
                         <Button
                             variant="ghost"
                             size="icon"
+                            tabIndex={-1}
                             className={cn("h-7 w-7", editor.isActive('orderedList') ? 'bg-muted' : '')}
                             onClick={() => editor.chain().focus().toggleOrderedList().run()}
                             title="Ordered List"
@@ -378,6 +383,7 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
                                 <Button
                                     variant="ghost"
                                     size="icon"
+                                    tabIndex={-1}
                                     className={cn("h-7 w-7", editor.isActive('link') ? 'bg-muted' : '')}
                                     onClick={handleOpenLinkPopover}
                                     title="Link"
@@ -441,6 +447,7 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
                         <Button
                             variant="ghost"
                             size="icon"
+                            tabIndex={-1}
                             className={cn("h-7 w-7")}
                             onClick={addImage}
                             title="Image URL"

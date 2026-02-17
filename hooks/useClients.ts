@@ -21,9 +21,9 @@ export const useClients = () => {
         return () => unsubscribe();
     }, []);
 
-    const addClient = async (name: string, userId: string) => {
+    const addClient = async (name: string, userId: string, logoUrl?: string, logoUseDarkBackground?: boolean) => {
         try {
-            await createClient(name, userId);
+            await createClient(name, userId, logoUrl, logoUseDarkBackground);
             // No need to manually refresh - subscription handles it
             return true;
         } catch (err: any) {

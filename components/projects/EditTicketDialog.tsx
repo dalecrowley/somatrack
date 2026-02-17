@@ -54,7 +54,7 @@ interface EditTicketDialogProps {
 }
 
 export function EditTicketDialog({ ticket, projectId, projectName, open, onOpenChange, color: initialColor }: EditTicketDialogProps) {
-    const { editTicket, removeTicket } = useTickets(projectId);
+    const { editTicket, removeTicket, archiveTicket } = useTickets(projectId);
     const { project } = useProject(projectId);
     const { users } = useUsers();
     const currentUser = useAuthStore((state) => state.user);
@@ -146,6 +146,15 @@ export function EditTicketDialog({ ticket, projectId, projectName, open, onOpenC
     const handleDateSelect = async (date: Date | undefined) => {
         setDueDate(date);
         await editTicket(ticket.id, { dueDate: date });
+    };
+
+    const handleArchive = async () => {
+        try {
+            await archiveTicket(ticket.id);
+            onOpenChange(false);
+        } catch (error) {
+            console.error('Failed to archive ticket', error);
+        }
     };
 
     const handleDelete = async () => {
@@ -482,8 +491,8 @@ export function EditTicketDialog({ ticket, projectId, projectName, open, onOpenC
                                 <div className="space-y-1.5 pt-4">
                                     <Button
                                         variant="secondary"
-                                        className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-destructive/10 hover:text-destructive transition-colors"
-                                        onClick={handleDelete}
+                                        className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 transition-colors"
+                                        onClick={handleArchive}
                                     >
                                         <Archive className="h-3.5 w-3.5 mr-2 opacity-70" />
                                         Archive

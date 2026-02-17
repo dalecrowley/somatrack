@@ -23,12 +23,16 @@ const COLLECTION = 'projects';
 export const createProject = async (
     name: string,
     clientId: string,
-    userId: string
+    userId: string,
+    logoUrl?: string,
+    logoUseDarkBackground?: boolean
 ): Promise<string> => {
     try {
         const docRef = await addDoc(collection(db, COLLECTION), {
             name,
             clientId,
+            logoUrl: logoUrl || null,
+            logoUseDarkBackground: !!logoUseDarkBackground,
             createdBy: userId,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),

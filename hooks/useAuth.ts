@@ -5,6 +5,7 @@ import { User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { onAuthChange } from '@/lib/firebase/auth';
 import { db } from '@/lib/firebase/config';
+import { useAuthStore } from '@/lib/store/useAuthStore';
 
 export interface UserData {
     uid: string;
@@ -18,49 +19,39 @@ export interface UserData {
  * Hook to get current authenticated user and their Firestore data
  */
 export const useAuth = () => {
-    const [user, setUser] = useState<User | null>(null);
+    const user = useAuthStore((state) => state.user);
+    const loading = useAuthStore((state) => state.loading);
     const [userData, setUserData] = useState<UserData | null>(null);
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Subscribe to auth state changes
-        console.log('Setting up useAuth subscription...');
-        const unsubscribeAuth = onAuthChange((authUser) => {
-            console.log('Auth state changed:', authUser ? 'User logged in' : 'User logged out', authUser?.email);
-            setUser(authUser);
+        if (!user) {
+            setUserData(null);
+            return;
+        }
 
-            if (!authUser) {
-                setUserData(null);
-                setLoading(false);
-                return;
+        // Subscribe to user document in Firestore
+        console.log('Fetching Firestore user data for:', user.email);
+        const userRef = doc(db, 'users', user.uid);
+        const unsubscribeFirestore = onSnapshot(userRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setUserData({
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: user.displayName,
+                    photoURL: user.photoURL,
+                    role: data.role || 'member',
+                });
             }
-
-            // Subscribe to user document in Firestore
-            console.log('Fetching Firestore user data...');
-            const userRef = doc(db, 'users', authUser.uid);
-            const unsubscribeFirestore = onSnapshot(userRef, (docSnap) => {
-                console.log('Firestore snapshot received:', docSnap.exists());
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    setUserData({
-                        uid: authUser.uid,
-                        email: authUser.email,
-                        displayName: authUser.displayName,
-                        photoURL: authUser.photoURL,
-                        role: data.role || 'member',
-                    });
-                }
-                setLoading(false);
-            }, (error) => {
-                console.error('Firestore snapshot error:', error);
-                setLoading(false);
-            });
-
-            return () => unsubscribeFirestore();
+        }, (error) => {
+            console.error('Firestore snapshot error:', error);
         });
 
-        return () => unsubscribeAuth();
-    }, []);
+        return () => unsubscribe();
+        function unsubscribe() {
+            unsubscribeFirestore();
+        }
+    }, [user]);
 
     return { user, userData, loading };
 };

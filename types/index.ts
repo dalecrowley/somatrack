@@ -11,6 +11,8 @@ export interface UserProfile {
 export interface Client {
     id: string;
     name: string;
+    logoUrl?: string; // Optional client logo
+    logoUseDarkBackground?: boolean; // Whether the logo should be shown on a dark background
     createdAt: any;
     createdBy: string;
     updatedAt: any;
@@ -20,6 +22,8 @@ export interface Project {
     id: string;
     name: string;
     clientId: string;
+    logoUrl?: string; // Optional project logo
+    logoUseDarkBackground?: boolean; // Whether the project logo should be shown on a dark background
     boxFolderId?: string;
     description?: string;
     statuses?: ProjectStatus[]; // Columns
@@ -65,6 +69,7 @@ export interface Ticket {
     createdAt: any;
     createdBy: string;
     updatedAt: any;
+    isArchived?: boolean;
 }
 
 export interface Comment {

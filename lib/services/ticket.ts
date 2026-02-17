@@ -23,21 +23,50 @@ export const subscribeToTickets = (
     projectId: string,
     callback: (tickets: Ticket[]) => void
 ) => {
-    // Tickets are stored in a subcollection 'tickets' under the project document
     const ticketsRef = collection(db, 'projects', projectId, 'tickets');
+    // Using a simple query and filtering client-side to avoid index requirements for (!isArchived)
     const q = query(
         ticketsRef,
         orderBy('order', 'asc')
     );
 
     return onSnapshot(q, (snapshot) => {
-        const tickets = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        } as Ticket));
+        const tickets = snapshot.docs
+            .map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            } as Ticket))
+            .filter(t => !t.isArchived); // Hide archived by default
         callback(tickets);
     }, (error) => {
         console.error('Error in tickets subscription:', error);
+    });
+};
+
+/**
+ * Subscribe to archived tickets for a specific project
+ */
+export const subscribeToArchivedTickets = (
+    projectId: string,
+    callback: (tickets: Ticket[]) => void
+) => {
+    const ticketsRef = collection(db, 'projects', projectId, 'tickets');
+    // Removing the 'where' filter to avoid requiring a composite index for (isArchived == true && orderBy updatedAt)
+    const q = query(
+        ticketsRef,
+        orderBy('updatedAt', 'desc')
+    );
+
+    return onSnapshot(q, (snapshot) => {
+        const tickets = snapshot.docs
+            .map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            } as Ticket))
+            .filter(t => t.isArchived === true);
+        callback(tickets);
+    }, (error) => {
+        console.error('Error in archived tickets subscription:', error);
     });
 };
 

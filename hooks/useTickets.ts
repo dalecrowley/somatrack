@@ -6,7 +6,8 @@ import {
     subscribeToTickets,
     createTicket,
     updateTicket,
-    deleteTicket
+    deleteTicket,
+    subscribeToArchivedTickets
 } from '@/lib/services/ticket';
 
 export const useTickets = (projectId?: string) => {
@@ -64,12 +65,59 @@ export const useTickets = (projectId?: string) => {
         }
     };
 
+    const archiveTicket = async (ticketId: string) => {
+        if (!projectId) return false;
+        try {
+            await updateTicket(projectId, ticketId, { isArchived: true });
+            return true;
+        } catch (err: any) {
+            setError(err.message || 'Failed to archive ticket');
+            return false;
+        }
+    };
+
+    const unarchiveTicket = async (ticketId: string) => {
+        if (!projectId) return false;
+        try {
+            await updateTicket(projectId, ticketId, { isArchived: false });
+            return true;
+        } catch (err: any) {
+            setError(err.message || 'Failed to unarchive ticket');
+            return false;
+        }
+    };
+
     return {
         tickets,
         loading,
         error,
         addTicket,
         editTicket,
-        removeTicket
+        removeTicket,
+        archiveTicket,
+        unarchiveTicket
     };
+};
+
+export const useArchivedTickets = (projectId?: string) => {
+    const [tickets, setTickets] = useState<Ticket[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!projectId) {
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+        const unsubscribe = subscribeToArchivedTickets(projectId, (data) => {
+            setTickets(data);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [projectId]);
+
+    return { tickets, loading, error };
 };

@@ -40,11 +40,19 @@ export default function ProjectsPage() {
             </div>
 
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Manage projects for <span className="font-semibold text-foreground">{client?.name}</span>
-                    </p>
+                <div className="space-y-4">
+                    {client?.logoUrl && (
+                        <div className={`h-16 w-fit px-6 py-2 rounded-xl border border-muted-foreground/10 flex items-center justify-center transition-colors ${client.logoUseDarkBackground ? 'bg-zinc-900 border-zinc-800' : 'bg-white/50'
+                            }`}>
+                            <img src={client.logoUrl} alt={`${client.name} logo`} className="h-full w-auto object-contain max-h-[85%] max-w-[90%]" />
+                        </div>
+                    )}
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+                        <p className="text-muted-foreground mt-1">
+                            Manage projects for <span className="font-semibold text-foreground">{client?.name}</span>
+                        </p>
+                    </div>
                 </div>
                 <CreateProjectDialog clientId={clientId} />
             </div>

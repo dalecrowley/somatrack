@@ -1,16 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { signInWithGoogle } from '@/lib/firebase/auth';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function LoginPage() {
+    const { user, loading: authLoading } = useAuth();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
+
+    // Reactive redirect: If the global auth state says we're logged in, go to dashboard.
+    // This bypasses the "hanging promise" issue where the login succeeds but the
+    // popup doesn't signal back correctly to the main window.
+    useEffect(() => {
+        if (user && !authLoading) {
+            router.push('/dashboard');
+        }
+    }, [user, authLoading, router]);
 
     const handleGoogleSignIn = async () => {
         console.log('Login button clicked');
@@ -18,9 +29,7 @@ export default function LoginPage() {
         setError(null);
 
         try {
-            const user = await signInWithGoogle();
-            console.log('Login successful, redirecting to home...', user);
-            router.push('/dashboard'); // Redirect to dashboard after successful login
+            await signInWithGoogle();
         } catch (err: any) {
             console.error('Login error caught in page:', err);
             setError(err.message || 'Failed to sign in. Please try again.');

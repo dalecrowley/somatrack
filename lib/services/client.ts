@@ -19,10 +19,12 @@ const COLLECTION = 'clients';
 /**
  * Create a new client
  */
-export const createClient = async (name: string, userId: string): Promise<string> => {
+export const createClient = async (name: string, userId: string, logoUrl?: string, logoUseDarkBackground?: boolean): Promise<string> => {
     try {
         const docRef = await addDoc(collection(db, COLLECTION), {
             name,
+            logoUrl: logoUrl || null,
+            logoUseDarkBackground: !!logoUseDarkBackground,
             createdBy: userId,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
