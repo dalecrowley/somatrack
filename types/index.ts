@@ -16,6 +16,7 @@ export interface Client {
     createdAt: any;
     createdBy: string;
     updatedAt: any;
+    isArchived?: boolean;
 }
 
 export interface Project {
@@ -31,6 +32,7 @@ export interface Project {
     createdAt: any;
     createdBy: string;
     updatedAt: any;
+    isArchived?: boolean;
 }
 
 

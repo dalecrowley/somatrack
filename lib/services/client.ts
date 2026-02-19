@@ -54,7 +54,7 @@ export const getClients = async (): Promise<Client[]> => {
 };
 
 /**
- * Subscribe to clients list for real-time updates
+ * Subscribe to clients list for real-time updates (active clients only)
  */
 export const subscribeToClients = (callback: (clients: Client[]) => void) => {
     const q = query(collection(db, COLLECTION), orderBy('name'));
@@ -62,10 +62,26 @@ export const subscribeToClients = (callback: (clients: Client[]) => void) => {
         const clients = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
-        } as Client));
+        } as Client)).filter(client => !client.isArchived);
         callback(clients);
     }, (error) => {
         console.error('Error in clients subscription:', error);
+    });
+};
+
+/**
+ * Subscribe to archived clients list for real-time updates
+ */
+export const subscribeToArchivedClients = (callback: (clients: Client[]) => void) => {
+    const q = query(collection(db, COLLECTION), orderBy('name'));
+    return onSnapshot(q, (snapshot) => {
+        const clients = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        } as Client)).filter(client => client.isArchived);
+        callback(clients);
+    }, (error) => {
+        console.error('Error in archived clients subscription:', error);
     });
 };
 

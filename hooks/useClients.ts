@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Client } from '@/types';
-import { subscribeToClients, createClient, updateClient, deleteClient } from '@/lib/services/client';
+import { subscribeToClients, subscribeToArchivedClients, createClient, updateClient, deleteClient } from '@/lib/services/client';
 
 export const useClients = () => {
     const [clients, setClients] = useState<Client[]>([]);
@@ -52,12 +52,52 @@ export const useClients = () => {
         }
     };
 
+    const archiveClient = async (id: string) => {
+        try {
+            await updateClient(id, { isArchived: true });
+            return true;
+        } catch (err: any) {
+            setError(err.message || 'Failed to archive client');
+            return false;
+        }
+    };
+
+    const unarchiveClient = async (id: string) => {
+        try {
+            await updateClient(id, { isArchived: false });
+            return true;
+        } catch (err: any) {
+            setError(err.message || 'Failed to unarchive client');
+            return false;
+        }
+    };
+
     return {
         clients,
         loading,
         error,
         addClient,
         editClient,
-        removeClient
+        removeClient,
+        archiveClient,
+        unarchiveClient
     };
+};
+
+export const useArchivedClients = () => {
+    const [clients, setClients] = useState<Client[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setLoading(true);
+        const unsubscribe = subscribeToArchivedClients((data) => {
+            setClients(data);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    return { clients, loading, error };
 };

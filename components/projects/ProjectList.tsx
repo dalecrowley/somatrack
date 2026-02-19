@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { MoreHorizontal, FolderOpen, Trash2, Edit2, Folder, Layout } from 'lucide-react';
+import { MoreHorizontal, FolderOpen, Trash2, Edit2, Folder, Layout, Archive } from 'lucide-react';
 import { Project } from '@/types';
 import { useProjects } from '@/hooks/useProjects';
 import { EditProjectDialog } from './EditProjectDialog';
@@ -41,7 +41,7 @@ interface ProjectListProps {
 }
 
 export function ProjectList({ projects, isLoading, clientId }: ProjectListProps) {
-    const { removeProject } = useProjects(clientId);
+    const { removeProject, archiveProject } = useProjects(clientId);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [editingProject, setEditingProject] = useState<Project | null>(null);
 
@@ -117,6 +117,15 @@ export function ProjectList({ projects, isLoading, clientId }: ProjectListProps)
                                                 >
                                                     <Edit2 className="mr-2 h-4 w-4" />
                                                     Rename
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        archiveProject(project.id, clientId);
+                                                    }}
+                                                >
+                                                    <Archive className="mr-2 h-4 w-4" />
+                                                    Archive
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
                                                     className="text-red-600"

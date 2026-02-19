@@ -19,7 +19,14 @@ export async function POST(req: NextRequest) {
             name: boxFile.name
         });
     } catch (error: any) {
-        console.error('API Upload error:', error);
+        // Log full error details for debugging
+        console.error('API Upload error:', {
+            message: error.message,
+            status: error.status || error.statusCode,
+            code: error.response?.body?.code || error.code,
+            details: error.response?.body?.message,
+            body: error.response?.body,
+        });
 
         // Try to extract more details from Box error if available
         const details = error.response?.body?.message || error.message;
@@ -29,6 +36,6 @@ export async function POST(req: NextRequest) {
             error: 'Upload failed',
             details: details,
             code: code
-        }, { status: error.status || 500 });
+        }, { status: error.status || error.statusCode || 500 });
     }
 }

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { MoreHorizontal, Folder, Trash2, Edit2 } from 'lucide-react';
+import { MoreHorizontal, Folder, Trash2, Edit2, Archive } from 'lucide-react';
 import { Client } from '@/types';
 import { useClients } from '@/hooks/useClients';
 import { Button } from '@/components/ui/button';
@@ -42,7 +42,7 @@ interface ClientListProps {
 }
 
 export function ClientList({ clients, isLoading }: ClientListProps) {
-    const { removeClient } = useClients();
+    const { removeClient, archiveClient } = useClients();
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
 
@@ -114,6 +114,13 @@ export function ClientList({ clients, isLoading }: ClientListProps) {
                                                     <Edit2 className="mr-2 h-4 w-4" />
                                                     Rename
                                                 </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    archiveClient(client.id);
+                                                }}>
+                                                    <Archive className="mr-2 h-4 w-4" />
+                                                    Archive
+                                                </DropdownMenuItem>
                                                 <DropdownMenuItem
                                                     className="text-red-600"
                                                     onClick={(e) => {
@@ -136,7 +143,7 @@ export function ClientList({ clients, isLoading }: ClientListProps) {
                                 {client.logoUrl ? (
                                     <div className={`h-20 w-full rounded-xl border border-muted-foreground/10 flex items-center justify-center transition-colors ${client.logoUseDarkBackground ? 'bg-zinc-900 border-zinc-800' : 'bg-white/50'
                                         }`}>
-                                        <img src={client.logoUrl} alt={`${client.name} logo`} className="max-h-[70%] max-w-[90%] object-contain" />
+                                        <img src={client.logoUrl} alt={`${client.name} logo`} className="h-12 w-auto max-w-[85%] object-contain" />
                                     </div>
                                 ) : (
                                     <div className="h-20 w-full flex items-center justify-start opacity-10">

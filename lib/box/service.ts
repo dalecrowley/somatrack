@@ -54,11 +54,15 @@ export class BoxService {
 
         try {
             // 1. Check if file exists in the folder to support versioning
-            const items = await this.client.folders.getFolderItems(folderId, {
-                queryParams: { fields: ['name', 'id'], limit: 1000 }
-            });
-
-            const existingFile = items.entries?.find((item: any) => item.type === 'file' && item.name === fileName);
+            // Skip the listing check when folderId is '0' (root) — service accounts
+            // cannot list the root folder and logos are always uploaded fresh anyway.
+            let existingFile: any = null;
+            if (folderId !== '0') {
+                const items = await this.client.folders.getFolderItems(folderId, {
+                    queryParams: { fields: ['name', 'id'], limit: 1000 }
+                });
+                existingFile = items.entries?.find((item: any) => item.type === 'file' && item.name === fileName);
+            }
 
             if (existingFile) {
                 console.log(`ℹ️ File ${fileName} already exists (ID: ${existingFile.id}). Uploading new version...`);

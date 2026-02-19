@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Project } from '@/types';
 import {
     subscribeToProjects,
+    subscribeToArchivedProjects,
     createProject,
     updateProject,
     deleteProject
@@ -62,12 +63,57 @@ export const useProjects = (clientId?: string) => {
         }
     };
 
+    const archiveProject = async (id: string, clientId: string) => {
+        try {
+            await updateProject(id, { isArchived: true });
+            return true;
+        } catch (err: any) {
+            setError(err.message || 'Failed to archive project');
+            return false;
+        }
+    };
+
+    const unarchiveProject = async (id: string, clientId: string) => {
+        try {
+            await updateProject(id, { isArchived: false });
+            return true;
+        } catch (err: any) {
+            setError(err.message || 'Failed to unarchive project');
+            return false;
+        }
+    };
+
     return {
         projects,
         loading,
         error,
         addProject,
         editProject,
-        removeProject
+        removeProject,
+        archiveProject,
+        unarchiveProject
     };
+};
+
+export const useArchivedProjects = (clientId: string) => {
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!clientId) {
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+        const unsubscribe = subscribeToArchivedProjects(clientId, (data) => {
+            setProjects(data);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [clientId]);
+
+    return { projects, loading, error };
 };

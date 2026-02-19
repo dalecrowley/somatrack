@@ -17,6 +17,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+import { ProjectInfoDialog } from '@/components/projects/ProjectInfoDialog';
 import { ArchivedTicketsDialog } from '@/components/projects/ArchivedTicketsDialog';
 
 export default function ProjectPage() {
@@ -26,6 +27,7 @@ export default function ProjectPage() {
     const { project, loading: projectLoading } = useProject(projectId);
     const [client, setClient] = useState<Client | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [infoOpen, setInfoOpen] = useState(false);
 
     // Fetch client details for the header
     useEffect(() => {
@@ -71,7 +73,12 @@ export default function ProjectPage() {
                             {client?.name || 'Loading...'}
                         </Link>
                         <ChevronRight className="mx-2 h-4 w-4" />
-                        <span className="font-medium text-foreground">{project.name}</span>
+                        <span
+                            className="font-medium text-foreground cursor-pointer hover:underline decoration-dashed underline-offset-4"
+                            onClick={() => setInfoOpen(true)}
+                        >
+                            {project.name}
+                        </span>
                     </div>
                     <div className="flex items-center gap-4">
                         {(project.logoUrl || client?.logoUrl) && (
@@ -84,7 +91,12 @@ export default function ProjectPage() {
                                 />
                             </div>
                         )}
-                        <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+                        <h1
+                            className="text-2xl font-bold tracking-tight cursor-pointer hover:text-primary transition-colors"
+                            onClick={() => setInfoOpen(true)}
+                        >
+                            {project.name}
+                        </h1>
                     </div>
                 </div>
 
@@ -122,6 +134,14 @@ export default function ProjectPage() {
                     open={settingsOpen}
                     onOpenChange={setSettingsOpen}
                     projectId={projectId}
+                />
+            )}
+
+            {infoOpen && (
+                <ProjectInfoDialog
+                    project={project}
+                    open={infoOpen}
+                    onOpenChange={setInfoOpen}
                 />
             )}
         </div>

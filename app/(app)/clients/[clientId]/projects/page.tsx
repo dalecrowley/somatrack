@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
 import { useProjects } from '@/hooks/useProjects';
 import { ProjectList } from '@/components/projects/ProjectList';
+import { ArchivedProjectsDialog } from '@/components/projects/ArchivedProjectsDialog';
 import { CreateProjectDialog } from '@/components/projects/CreateProjectDialog';
 import { getClient } from '@/lib/services/client'; // Server-side function, but usable in client components
 import { Client } from '@/types';
@@ -54,7 +55,10 @@ export default function ProjectsPage() {
                         </p>
                     </div>
                 </div>
-                <CreateProjectDialog clientId={clientId} />
+                <div className="flex gap-2">
+                    <ArchivedProjectsDialog clientId={clientId} clientName={client?.name} />
+                    <CreateProjectDialog clientId={clientId} />
+                </div>
             </div>
 
             <div className="w-full">

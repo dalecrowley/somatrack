@@ -45,7 +45,7 @@ export const createProject = async (
 };
 
 /**
- * Subscribe to projects for a specific client
+ * Subscribe to projects for a specific client (active only)
  */
 export const subscribeToProjects = (
     clientId: string,
@@ -61,10 +61,34 @@ export const subscribeToProjects = (
         const projects = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
-        } as Project));
+        } as Project)).filter(p => !p.isArchived);
         callback(projects);
     }, (error) => {
         console.error('Error in projects subscription:', error);
+    });
+};
+
+/**
+ * Subscribe to archived projects for a specific client
+ */
+export const subscribeToArchivedProjects = (
+    clientId: string,
+    callback: (projects: Project[]) => void
+) => {
+    const q = query(
+        collection(db, COLLECTION),
+        where('clientId', '==', clientId),
+        orderBy('name')
+    );
+
+    return onSnapshot(q, (snapshot) => {
+        const projects = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        } as Project)).filter(p => p.isArchived);
+        callback(projects);
+    }, (error) => {
+        console.error('Error in archived projects subscription:', error);
     });
 };
 

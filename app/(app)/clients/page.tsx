@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import { useClients } from '@/hooks/useClients';
 import { ClientList } from '@/components/clients/ClientList';
+import { ArchivedClientsDialog } from '@/components/clients/ArchivedClientsDialog';
 import { CreateClientDialog } from '@/components/clients/CreateClientDialog';
 
 export default function ClientsPage() {
@@ -17,7 +18,10 @@ export default function ClientsPage() {
                         Manage your clients and their projects
                     </p>
                 </div>
-                <CreateClientDialog />
+                <div className="flex gap-2">
+                    <ArchivedClientsDialog />
+                    <CreateClientDialog />
+                </div>
             </div>
 
             <div className="w-full">

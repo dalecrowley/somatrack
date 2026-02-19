@@ -28,6 +28,7 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
     const { editClient } = useClients();
     const [name, setName] = useState('');
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [useDarkBackground, setUseDarkBackground] = useState(false);
@@ -39,6 +40,7 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
             setLogoPreview(client.logoUrl || null);
             setUseDarkBackground(client.logoUseDarkBackground || false);
             setLogoFile(null);
+            setError(null);
         }
     }, [client, open]);
 
@@ -47,6 +49,7 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
         if (!client || !name.trim()) return;
 
         setLoading(true);
+        setError(null);
         try {
             let logoUrl = client.logoUrl || '';
 
@@ -60,9 +63,12 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                 });
                 const { folderId } = await folderRes.json();
 
-                // 2. Upload the file
+                // 2. Upload the file with a unique name to avoid collisions in the shared image folder
+                const ext = logoFile.name.split('.').pop();
+                const uniqueName = `logo_${Date.now()}.${ext}`;
+                const renamedFile = new File([logoFile], uniqueName, { type: logoFile.type });
                 const formData = new FormData();
-                formData.append('file', logoFile);
+                formData.append('file', renamedFile);
                 formData.append('folderId', folderId || '0');
 
                 const uploadRes = await fetch('/api/box/upload', {
@@ -70,7 +76,10 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                     body: formData
                 });
 
-                if (!uploadRes.ok) throw new Error('Box upload failed');
+                if (!uploadRes.ok) {
+                    const errBody = await uploadRes.json().catch(() => ({}));
+                    throw new Error(errBody.details || errBody.error || 'Box upload failed');
+                }
 
                 const { id } = await uploadRes.json();
                 // Store the proxy URL as the logoUrl
@@ -88,8 +97,9 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
             if (success) {
                 onOpenChange(false);
             }
-        } catch (error) {
-            console.error('Failed to update client with logo:', error);
+        } catch (err: any) {
+            console.error('Failed to update client with logo:', err);
+            setError(err.message || 'Failed to save. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -197,6 +207,9 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                         </div>
                     </div>
                     <DialogFooter>
+                        {error && (
+                            <p className="text-sm text-destructive w-full text-center mb-2">{error}</p>
+                        )}
                         <Button type="submit" disabled={loading || !name.trim()} className="w-full">
                             {loading ? (
                                 <>

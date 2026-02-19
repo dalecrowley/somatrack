@@ -197,17 +197,7 @@ export function EditTicketDialog({ ticket, projectId, projectName, open, onOpenC
         }
     };
 
-    // Auto-save description with debounce
-    useEffect(() => {
-        if (!isEditingDesc || tempDesc === description) return;
-
-        const timer = setTimeout(async () => {
-            setDescription(tempDesc);
-            await editTicket(ticket.id, { description: tempDesc });
-        }, 1000); // 1s debounce
-
-        return () => clearTimeout(timer);
-    }, [tempDesc, isEditingDesc]);
+    // Auto-save description with debounce REMOVED
 
     const statuses = project?.statuses || [];
     const statusLabel = statuses.find(s => s.id === currentStatusId)?.title?.toUpperCase() || currentStatusId?.toUpperCase().replace(/_/g, ' ') || 'TODO';
@@ -216,321 +206,396 @@ export function EditTicketDialog({ ticket, projectId, projectName, open, onOpenC
     // Find creator for the "Posted by" section
     const creatorUser = users.find(u => u.uid === ticket.createdBy || u.email === ticket.createdBy);
 
+    const [showUnsavedAlert, setShowUnsavedAlert] = useState(false);
+    const hasUnsavedDescription = isEditingDesc && tempDesc !== description;
+
+    const handleClose = () => {
+        if (hasUnsavedDescription) {
+            setShowUnsavedAlert(true);
+        } else {
+            onOpenChange(false);
+        }
+    };
+
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent
-                className="md:max-w-[75vw] w-[95vw] h-[90vh] flex flex-col p-0 gap-0 overflow-hidden border-none shadow-2xl transition-all duration-300"
-                showCloseButton={false}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-            >
-                {isDragging && (
-                    <div className="absolute inset-0 bg-primary/10 backdrop-blur-[1px] z-50 flex items-center justify-center border-2 border-primary border-dashed m-4 rounded-xl pointer-events-none">
-                        <div className="bg-background/90 px-6 py-4 rounded-lg shadow-lg flex flex-col items-center gap-2">
-                            <div className="p-3 bg-primary/10 rounded-full">
-                                <Upload className="h-8 w-8 text-primary" />
-                            </div>
-                            <p className="font-semibold text-lg text-primary">Drop files to upload</p>
-                        </div>
-                    </div>
-                )}
-                <VisuallyHidden>
-                    <DialogTitle>Edit Ticket: {title}</DialogTitle>
-                    <DialogDescription>View and edit ticket details, attachments, and discussion.</DialogDescription>
-                </VisuallyHidden>
-                {/* Status Banner */}
-                <div
-                    className="h-10 flex items-center justify-center relative transition-colors duration-500"
-                    style={{ backgroundColor: bannerColor || '#7FB3B3' }}
+        <>
+            <Dialog open={open} onOpenChange={(newOpen) => {
+                if (!newOpen && hasUnsavedDescription) {
+                    setShowUnsavedAlert(true);
+                    return;
+                }
+                onOpenChange(newOpen);
+            }}>
+                <DialogContent
+                    className="md:max-w-[75vw] w-[95vw] h-[90vh] flex flex-col p-0 gap-0 overflow-hidden border-none shadow-2xl transition-all duration-300"
+                    showCloseButton={false}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onInteractOutside={(e) => {
+                        if (hasUnsavedDescription) {
+                            e.preventDefault();
+                            setShowUnsavedAlert(true);
+                        }
+                    }}
                 >
-                    <span className="text-white text-xs font-bold tracking-[0.2em]">{statusLabel}</span>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-2 text-white/80 hover:text-white hover:bg-white/10 h-7 w-7"
-                        onClick={() => onOpenChange(false)}
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto bg-[#F9FAFB] dark:bg-background">
-                    <div className="flex flex-col md:flex-row h-full">
-                        {/* Main Content */}
-                        <div className="flex-1 p-10 pr-6 space-y-8">
-                            {/* Header / Title Section */}
-                            <div className="space-y-4">
-                                {isEditingTitle ? (
-                                    <div className="space-y-3">
-                                        <Input
-                                            className="text-2xl font-bold h-auto py-1 px-2 border-primary/30 bg-white focus-visible:ring-2 focus-visible:ring-primary/20"
-                                            value={tempTitle}
-                                            onChange={(e) => setTempTitle(e.target.value)}
-                                            autoFocus
-                                            onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
-                                            onBlur={handleSaveTitle}
-                                        />
-                                    </div>
-                                ) : (
-                                    <h2
-                                        className="text-2xl font-bold text-[#4A4A4A] dark:text-foreground cursor-pointer hover:bg-muted/30 px-1 py-0.5 rounded transition-colors"
-                                        onClick={() => setIsEditingTitle(true)}
-                                    >
-                                        {title}
-                                    </h2>
-                                )}
-
-                                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                                    <span className="flex items-center gap-1 opacity-70">
-                                        Posted by <span className="font-semibold underline cursor-pointer">Dale Crowley</span> just now.
-                                    </span>
-                                    <span className="opacity-40">•</span>
-                                    <span>In swimlane <span className="font-semibold underline cursor-pointer">{ticket.swimlaneId}</span>, in list <span className="font-semibold underline cursor-pointer">{statusLabel}</span></span>
-                                    {assignedUsers.length > 0 && (
-                                        <>
-                                            <span className="opacity-40">•</span>
-                                            <span className="flex items-center gap-1">
-                                                Assigned to <span className="font-semibold">{assignedUsers.map(u => u.displayName || u.email).join(', ')}</span>
-                                            </span>
-                                        </>
-                                    )}
+                    {isDragging && (
+                        <div className="absolute inset-0 bg-primary/10 backdrop-blur-[1px] z-50 flex items-center justify-center border-2 border-primary border-dashed m-4 rounded-xl pointer-events-none">
+                            <div className="bg-background/90 px-6 py-4 rounded-lg shadow-lg flex flex-col items-center gap-2">
+                                <div className="p-3 bg-primary/10 rounded-full">
+                                    <Upload className="h-8 w-8 text-primary" />
                                 </div>
+                                <p className="font-semibold text-lg text-primary">Drop files to upload</p>
                             </div>
+                        </div>
+                    )}
+                    <VisuallyHidden>
+                        <DialogTitle>Edit Ticket: {title}</DialogTitle>
+                        <DialogDescription>View and edit ticket details, attachments, and discussion.</DialogDescription>
+                    </VisuallyHidden>
+                    {/* Status Banner */}
+                    <div
+                        className="h-10 flex items-center justify-center relative transition-colors duration-500"
+                        style={{ backgroundColor: bannerColor || '#7FB3B3' }}
+                    >
+                        <span className="text-white text-xs font-bold tracking-[0.2em]">{statusLabel}</span>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 text-white/80 hover:text-white hover:bg-white/10 h-7 w-7"
+                            onClick={handleClose}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
 
-                            {/* Description Area */}
-                            <div className="space-y-4">
-                                <div className="flex items-start gap-4">
-                                    <div className="h-8 w-8 rounded-full overflow-hidden flex-shrink-0 border bg-muted mt-1">
-                                        {currentUser?.photoURL ? (
-                                            <Avatar className="h-full w-full">
-                                                <AvatarImage src={currentUser.photoURL} />
-                                                <AvatarFallback>{currentUser.displayName?.[0]}</AvatarFallback>
-                                            </Avatar>
-                                        ) : (
-                                            <User className="h-full w-full p-1.5 opacity-40" />
+                    <div className="flex-1 overflow-y-auto bg-[#F9FAFB] dark:bg-background">
+                        <div className="flex flex-col md:flex-row h-full">
+                            {/* Main Content */}
+                            <div className="flex-1 p-10 pr-6 space-y-8">
+                                {/* Header / Title Section */}
+                                <div className="space-y-4">
+                                    {isEditingTitle ? (
+                                        <div className="space-y-3">
+                                            <Input
+                                                className="text-2xl font-bold h-auto py-1 px-2 border-primary/30 bg-white focus-visible:ring-2 focus-visible:ring-primary/20"
+                                                value={tempTitle}
+                                                onChange={(e) => setTempTitle(e.target.value)}
+                                                autoFocus
+                                                onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
+                                                onBlur={handleSaveTitle}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <h2
+                                            className="text-2xl font-bold text-[#4A4A4A] dark:text-foreground cursor-pointer hover:bg-muted/30 px-1 py-0.5 rounded transition-colors"
+                                            onClick={() => setIsEditingTitle(true)}
+                                        >
+                                            {title}
+                                        </h2>
+                                    )}
+
+                                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                        <span className="flex items-center gap-1 opacity-70">
+                                            Posted by <span className="font-semibold underline cursor-pointer">Dale Crowley</span> just now.
+                                        </span>
+                                        <span className="opacity-40">•</span>
+                                        <span>In swimlane <span className="font-semibold underline cursor-pointer">{ticket.swimlaneId}</span>, in list <span className="font-semibold underline cursor-pointer">{statusLabel}</span></span>
+                                        {assignedUsers.length > 0 && (
+                                            <>
+                                                <span className="opacity-40">•</span>
+                                                <span className="flex items-center gap-1">
+                                                    Assigned to <span className="font-semibold">{assignedUsers.map(u => u.displayName || u.email).join(', ')}</span>
+                                                </span>
+                                            </>
                                         )}
                                     </div>
+                                </div>
 
-                                    <div className="flex-1 space-y-4">
-                                        {isEditingDesc ? (
-                                            <div className="space-y-3">
-                                                <DescriptionEditor
-                                                    ref={descriptionEditorRef}
-                                                    content={tempDesc}
-                                                    onChange={setTempDesc}
-                                                    projectId={projectId}
-                                                    ticketId={ticket.id}
-                                                    projectName={projectName}
-                                                />
-                                            </div>
-                                        ) : (
-                                            <div
-                                                className={cn(
-                                                    "group relative min-h-[40px] transition-all",
-                                                    !description && "cursor-pointer"
-                                                )}
-                                                onClick={() => !description && setIsEditingDesc(true)}
-                                            >
-                                                {description ? (
-                                                    <div className="space-y-4">
-                                                        <div
-                                                            className="text-sm text-foreground/80 leading-relaxed cursor-pointer hover:bg-muted/10 p-2 -m-2 rounded transition-colors prose prose-sm max-w-none"
-                                                            onClick={() => setIsEditingDesc(true)}
-                                                            dangerouslySetInnerHTML={{ __html: description }}
-                                                        />
+                                {/* Description Area */}
+                                <div className="space-y-4">
+                                    <div className="flex items-start gap-4">
+                                        <div className="h-8 w-8 rounded-full overflow-hidden flex-shrink-0 border bg-muted mt-1">
+                                            {currentUser?.photoURL ? (
+                                                <Avatar className="h-full w-full">
+                                                    <AvatarImage src={currentUser.photoURL} />
+                                                    <AvatarFallback>{currentUser.displayName?.[0]}</AvatarFallback>
+                                                </Avatar>
+                                            ) : (
+                                                <User className="h-full w-full p-1.5 opacity-40" />
+                                            )}
+                                        </div>
+
+                                        <div className="flex-1 space-y-4">
+                                            {isEditingDesc ? (
+                                                <div className="space-y-3">
+                                                    <DescriptionEditor
+                                                        ref={descriptionEditorRef}
+                                                        content={tempDesc}
+                                                        onChange={setTempDesc}
+                                                        projectId={projectId}
+                                                        ticketId={ticket.id}
+                                                        projectName={projectName}
+                                                    />
+                                                    <div className="flex items-center gap-2">
                                                         <Button
-                                                            variant="secondary"
-                                                            size="sm"
-                                                            className="bg-[#EDEDED] text-[#4A4A4A] hover:bg-[#E0E0E0] h-8 px-4 font-normal text-xs transition-transform active:scale-95"
-                                                            onClick={() => setIsEditingDesc(true)}
+                                                            onClick={handleSaveDesc}
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3 text-xs"
                                                         >
-                                                            Edit description
+                                                            Update description
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            onClick={() => {
+                                                                setTempDesc(description);
+                                                                setIsEditingDesc(false);
+                                                            }}
+                                                            className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground"
+                                                        >
+                                                            Cancel
                                                         </Button>
                                                     </div>
-                                                ) : (
-                                                    <Button variant="secondary" className="bg-[#EDEDED] text-[#4A4A4A] hover:bg-[#E0E0E0] h-8 px-4 font-normal text-xs transition-transform active:scale-95">
-                                                        Add description
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        )}
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    className={cn(
+                                                        "group relative min-h-[40px] transition-all",
+                                                        !description && "cursor-pointer"
+                                                    )}
+                                                    onClick={() => !description && setIsEditingDesc(true)}
+                                                >
+                                                    {description ? (
+                                                        <div className="space-y-4">
+                                                            <div
+                                                                className="text-sm text-foreground/80 leading-relaxed cursor-pointer hover:bg-muted/10 p-2 -m-2 rounded transition-colors prose prose-sm max-w-none"
+                                                                onClick={() => setIsEditingDesc(true)}
+                                                                dangerouslySetInnerHTML={{ __html: description }}
+                                                            />
+                                                            <Button
+                                                                variant="secondary"
+                                                                size="sm"
+                                                                className="bg-[#EDEDED] text-[#4A4A4A] hover:bg-[#E0E0E0] h-8 px-4 font-normal text-xs transition-transform active:scale-95"
+                                                                onClick={() => setIsEditingDesc(true)}
+                                                            >
+                                                                Edit description
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <Button variant="secondary" className="bg-[#EDEDED] text-[#4A4A4A] hover:bg-[#E0E0E0] h-8 px-4 font-normal text-xs transition-transform active:scale-95">
+                                                            Add description
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Attachments Section REMOVED - integrated into editor */}
-                            {/* Hidden file input for sidebar triggers */}
-                            <input
-                                type="file"
-                                className="hidden"
-                                ref={fileInputRef}
-                                multiple
-                                onChange={(e) => {
-                                    if (e.target.files && descriptionEditorRef.current) {
-                                        // Ensure we are in edit mode to insert
-                                        if (!isEditingDesc) setIsEditingDesc(true);
-                                        // Small timeout to allow render
-                                        setTimeout(() => {
-                                            descriptionEditorRef.current?.uploadFiles(Array.from(e.target.files!));
-                                        }, 100);
-                                    }
-                                    e.target.value = ''; // Reset
-                                }}
-                            />
-
-                            {/* Discussion Area */}
-                            <div className="pt-8 border-t space-y-4">
-                                <div className="flex items-center gap-3 text-sm font-semibold text-[#4A4A4A] dark:text-foreground">
-                                    <MessageSquare className="h-4 w-4" />
-                                    Discussion / Add Comments
-                                </div>
-                                <TicketComments
-                                    comments={comments}
-                                    onChange={(newComments) => {
-                                        setComments(newComments);
-                                        editTicket(ticket.id, { comments: newComments });
+                                {/* Attachments Section REMOVED - integrated into editor */}
+                                {/* Hidden file input for sidebar triggers */}
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    ref={fileInputRef}
+                                    multiple
+                                    onChange={(e) => {
+                                        if (e.target.files && descriptionEditorRef.current) {
+                                            // Ensure we are in edit mode to insert
+                                            if (!isEditingDesc) setIsEditingDesc(true);
+                                            // Small timeout to allow render
+                                            setTimeout(() => {
+                                                descriptionEditorRef.current?.uploadFiles(Array.from(e.target.files!));
+                                            }, 100);
+                                        }
+                                        e.target.value = ''; // Reset
                                     }}
                                 />
-                            </div>
-                        </div>
 
-                        {/* Sidebar */}
-                        <div className="w-full md:w-[220px] bg-white dark:bg-card border-l p-6 space-y-6">
-                            <div className="space-y-6">
-                                <div className="space-y-1.5">
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1 mb-2">Actions</p>
-
-                                    {/* Status Popover */}
-                                    <Popover modal={false} open={statusDropdownOpen} onOpenChange={setStatusDropdownOpen}>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="secondary"
-                                                className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 text-foreground/80 transition-colors"
-                                            >
-                                                <Check className="h-3.5 w-3.5 mr-2 opacity-70" />
-                                                Status
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-[200px] p-2" align="start">
-                                            <div className="space-y-1">
-                                                <p className="text-xs font-semibold px-2 py-1">Change Status</p>
-                                                {statuses.map((s) => (
-                                                    <Button
-                                                        key={s.id}
-                                                        variant="ghost"
-                                                        className="w-full justify-start h-8 px-2 text-xs"
-                                                        onClick={() => {
-                                                            handleStatusUpdate(s.id, s.color);
-                                                            setStatusDropdownOpen(false);
-                                                        }}
-                                                    >
-                                                        <div className="flex items-center gap-2 flex-1">
-                                                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
-                                                            <span>{s.title}</span>
-                                                        </div>
-                                                        {currentStatusId === s.id && <Check className="h-3 w-3" />}
-                                                    </Button>
-                                                ))}
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
-
-                                    {/* Assign Popover */}
-                                    <TicketAssigneePicker
-                                        value={assigneeIds}
-                                        onValueChange={async (newIds) => {
-                                            setAssigneeIds(newIds);
-                                            await editTicket(ticket.id, { assigneeIds: newIds });
+                                {/* Discussion Area */}
+                                <div className="pt-8 border-t space-y-4">
+                                    <div className="flex items-center gap-3 text-sm font-semibold text-[#4A4A4A] dark:text-foreground">
+                                        <MessageSquare className="h-4 w-4" />
+                                        Discussion / Add Comments
+                                    </div>
+                                    <TicketComments
+                                        comments={comments}
+                                        onChange={(newComments) => {
+                                            setComments(newComments);
+                                            editTicket(ticket.id, { comments: newComments });
                                         }}
                                     />
-
-                                    <Button
-                                        variant="secondary"
-                                        className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 text-foreground/80 transition-colors"
-                                        onClick={() => fileInputRef.current?.click()}
-                                    >
-                                        <Paperclip className="h-3.5 w-3.5 mr-2 opacity-70" />
-                                        Files
-                                    </Button>
-                                    <Button
-                                        variant="secondary"
-                                        className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 text-foreground/80 transition-colors"
-                                        onClick={() => {
-                                            if (!isEditingDesc) setIsEditingDesc(true);
-                                            setTimeout(() => descriptionEditorRef.current?.insertLink(), 100);
-                                        }}
-                                    >
-                                        <Link2 className="h-3.5 w-3.5 mr-2 opacity-70" />
-                                        Link
-                                    </Button>
-                                    <Popover modal={false}>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="secondary"
-                                                className={cn(
-                                                    "w-full justify-start h-8 px-2 text-xs font-normal transition-colors",
-                                                    dueDate ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-muted/40 hover:bg-muted/80 text-foreground/80"
-                                                )}
-                                            >
-                                                <Calendar className={cn("h-3.5 w-3.5 mr-2", dueDate ? "opacity-100" : "opacity-70")} />
-                                                {dueDate ? format(dueDate, "PPP") : "Due date"}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <CalendarComponent
-                                                mode="single"
-                                                selected={dueDate}
-                                                onSelect={handleDateSelect}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-
-                                <div className="space-y-1.5 pt-4">
-                                    <Button
-                                        variant="secondary"
-                                        className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 transition-colors"
-                                        onClick={handleArchive}
-                                    >
-                                        <Archive className="h-3.5 w-3.5 mr-2 opacity-70" />
-                                        Archive
-                                    </Button>
                                 </div>
                             </div>
 
-                            <div className="pt-6 border-t mt-auto">
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="sm" className="w-full justify-start text-[10px] text-destructive hover:bg-destructive/10 hover:text-destructive h-7">
-                                            <Trash2 className="h-3 w-3 mr-2" />
-                                            Remove Ticket
+                            {/* Sidebar */}
+                            <div className="w-full md:w-[220px] bg-white dark:bg-card border-l p-6 space-y-6">
+                                <div className="space-y-6">
+                                    <div className="space-y-1.5">
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1 mb-2">Actions</p>
+
+                                        {/* Status Popover */}
+                                        <Popover modal={false} open={statusDropdownOpen} onOpenChange={setStatusDropdownOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="secondary"
+                                                    className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 text-foreground/80 transition-colors"
+                                                >
+                                                    <Check className="h-3.5 w-3.5 mr-2 opacity-70" />
+                                                    Status
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[200px] p-2" align="start">
+                                                <div className="space-y-1">
+                                                    <p className="text-xs font-semibold px-2 py-1">Change Status</p>
+                                                    {statuses.map((s) => (
+                                                        <Button
+                                                            key={s.id}
+                                                            variant="ghost"
+                                                            className="w-full justify-start h-8 px-2 text-xs"
+                                                            onClick={() => {
+                                                                handleStatusUpdate(s.id, s.color);
+                                                                setStatusDropdownOpen(false);
+                                                            }}
+                                                        >
+                                                            <div className="flex items-center gap-2 flex-1">
+                                                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
+                                                                <span>{s.title}</span>
+                                                            </div>
+                                                            {currentStatusId === s.id && <Check className="h-3 w-3" />}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
+
+                                        {/* Assign Popover */}
+                                        <TicketAssigneePicker
+                                            value={assigneeIds}
+                                            onValueChange={async (newIds) => {
+                                                setAssigneeIds(newIds);
+                                                await editTicket(ticket.id, { assigneeIds: newIds });
+                                            }}
+                                        />
+
+                                        <Button
+                                            variant="secondary"
+                                            className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 text-foreground/80 transition-colors"
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
+                                            <Paperclip className="h-3.5 w-3.5 mr-2 opacity-70" />
+                                            Files
                                         </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Delete Ticket?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This action cannot be undone.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                                Delete
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                                <p className="text-[9px] text-muted-foreground mt-4 px-1">
-                                    Updated: {ticket.updatedAt ? new Date(ticket.updatedAt.toDate()).toLocaleDateString() : 'Today'}
-                                </p>
+                                        <Button
+                                            variant="secondary"
+                                            className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 text-foreground/80 transition-colors"
+                                            onClick={() => {
+                                                if (!isEditingDesc) setIsEditingDesc(true);
+                                                setTimeout(() => descriptionEditorRef.current?.insertLink(), 100);
+                                            }}
+                                        >
+                                            <Link2 className="h-3.5 w-3.5 mr-2 opacity-70" />
+                                            Link
+                                        </Button>
+                                        <Popover modal={false}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="secondary"
+                                                    className={cn(
+                                                        "w-full justify-start h-8 px-2 text-xs font-normal transition-colors",
+                                                        dueDate ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-muted/40 hover:bg-muted/80 text-foreground/80"
+                                                    )}
+                                                >
+                                                    <Calendar className={cn("h-3.5 w-3.5 mr-2", dueDate ? "opacity-100" : "opacity-70")} />
+                                                    {dueDate ? format(dueDate, "PPP") : "Due date"}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <CalendarComponent
+                                                    mode="single"
+                                                    selected={dueDate}
+                                                    onSelect={handleDateSelect}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+
+                                    <div className="space-y-1.5 pt-4">
+                                        <Button
+                                            variant="secondary"
+                                            className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 transition-colors"
+                                            onClick={handleArchive}
+                                        >
+                                            <Archive className="h-3.5 w-3.5 mr-2 opacity-70" />
+                                            Archive
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="pt-6 border-t mt-auto">
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="w-full justify-start text-[10px] text-destructive hover:bg-destructive/10 hover:text-destructive h-7">
+                                                <Trash2 className="h-3 w-3 mr-2" />
+                                                Remove Ticket
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Delete Ticket?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This action cannot be undone.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                                    Delete
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                    <p className="text-[9px] text-muted-foreground mt-4 px-1">
+                                        Updated: {ticket.updatedAt ? new Date(ticket.updatedAt.toDate()).toLocaleDateString() : 'Today'}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </DialogContent>
-        </Dialog>
+                </DialogContent>
+            </Dialog>
+
+            <AlertDialog open={showUnsavedAlert} onOpenChange={setShowUnsavedAlert}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            You have unsaved changes in the description. Do you want to discard them and close?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setShowUnsavedAlert(false)}>Keep Editing</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                setShowUnsavedAlert(false);
+                                onOpenChange(false);
+                            }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            Discard Changes
+                        </AlertDialogAction>
+                        <AlertDialogAction
+                            onClick={async () => {
+                                await handleSaveDesc();
+                                setShowUnsavedAlert(false);
+                                onOpenChange(false);
+                            }}
+                        >
+                            Save and Close
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 }

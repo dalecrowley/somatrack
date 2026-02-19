@@ -31,6 +31,7 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [useDarkBackground, setUseDarkBackground] = useState(false);
@@ -43,6 +44,7 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
             setLogoPreview(project.logoUrl || null);
             setUseDarkBackground(project.logoUseDarkBackground || false);
             setLogoFile(null);
+            setError(null);
         }
     }, [project, open]);
 
@@ -51,6 +53,7 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
         if (!project || !name.trim()) return;
 
         setLoading(true);
+        setError(null);
         try {
             let logoUrl = project.logoUrl || '';
 
@@ -64,9 +67,12 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
                 });
                 const { folderId } = await folderRes.json();
 
-                // 2. Upload the file
+                // 2. Upload the file with a unique name to avoid collisions in the shared image folder
+                const ext = logoFile.name.split('.').pop();
+                const uniqueName = `logo_${Date.now()}.${ext}`;
+                const renamedFile = new File([logoFile], uniqueName, { type: logoFile.type });
                 const formData = new FormData();
-                formData.append('file', logoFile);
+                formData.append('file', renamedFile);
                 formData.append('folderId', folderId || '0');
 
                 const uploadRes = await fetch('/api/box/upload', {
@@ -74,7 +80,10 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
                     body: formData
                 });
 
-                if (!uploadRes.ok) throw new Error('Box upload failed');
+                if (!uploadRes.ok) {
+                    const errBody = await uploadRes.json().catch(() => ({}));
+                    throw new Error(errBody.details || errBody.error || 'Box upload failed');
+                }
 
                 const { id } = await uploadRes.json();
                 // Store the proxy URL as the logoUrl
@@ -93,8 +102,9 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
             if (success) {
                 onOpenChange(false);
             }
-        } catch (error) {
-            console.error('Failed to update project with logo:', error);
+        } catch (err: any) {
+            console.error('Failed to update project with logo:', err);
+            setError(err.message || 'Failed to save. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -216,6 +226,9 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
                         )}
                     </div>
                     <DialogFooter>
+                        {error && (
+                            <p className="text-sm text-destructive w-full text-center mb-2">{error}</p>
+                        )}
                         <Button type="submit" disabled={loading || !name.trim()} className="w-full">
                             {loading ? (
                                 <>
