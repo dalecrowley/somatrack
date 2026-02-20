@@ -3,6 +3,7 @@ import { DragDropContext, DropResult, Droppable } from '@hello-pangea/dnd';
 import { Project, Ticket, ProjectStatus, Swimlane } from '@/types';
 import { useTickets } from '@/hooks/useTickets';
 import { useProject } from '@/hooks/useProject';
+import { getClient } from '@/lib/services/client';
 import { TicketCard } from './TicketCard';
 import { CreateTicketDialog } from './CreateTicketDialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -45,13 +46,24 @@ export function ProjectBoard({ projectId }: ProjectBoardProps) {
     // Dialog state for "Project Settings"
     const [settingsOpen, setSettingsOpen] = useState(false);
 
+    const [clientName, setClientName] = useState<string>('');
+
     useEffect(() => {
         setLocalTickets(tickets);
     }, [tickets]);
 
-    // Initialize defaults
+    // Initialize defaults and fetch client name
     useEffect(() => {
         if (project) {
+            // Fetch client name
+            if (project.clientId) {
+                getClient(project.clientId).then(client => {
+                    if (client) {
+                        setClientName(client.name);
+                    }
+                });
+            }
+
             const updates: any = {};
             if (!project.statuses || project.statuses.length === 0) {
                 updates.statuses = DEFAULT_STATUSES.map(s => ({ ...s, projectId }));
@@ -225,6 +237,7 @@ export function ProjectBoard({ projectId }: ProjectBoardProps) {
                                                         ticket={ticket}
                                                         index={index}
                                                         projectName={project?.name}
+                                                        clientName={clientName}
                                                         color={status.color} // Use Status Color for Ticket accent
                                                         statusLabel={status.title}
                                                     />

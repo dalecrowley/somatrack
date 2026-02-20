@@ -66,7 +66,10 @@ export function CreateClientDialog() {
                 const folderRes = await fetch('/api/box/folder', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fileName: logoFile.name, mimeType: logoFile.type })
+                    body: JSON.stringify({
+                        clientName: name, // Top level folder
+                        projectName: 'Logos' // Subfolder for client logos
+                    })
                 });
                 const { folderId } = await folderRes.json();
 

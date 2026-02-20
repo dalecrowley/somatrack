@@ -134,26 +134,45 @@ export class BoxService {
      * Create a folder for a project if it doesn't exist.
      */
     public async getOrCreateProjectFolder(projectName: string, parentFolderId?: string): Promise<string> {
-        try {
-            // Use provided parent, or default to root from env, or fallback to '0'
-            const effectiveParentId = parentFolderId || process.env.BOX_ROOT_FOLDER_ID || '0';
+        return this.getOrCreateSubfolder(parentFolderId || process.env.BOX_ROOT_FOLDER_ID || '0', projectName);
+    }
 
+    /**
+     * Sanitize a string for use as a Box folder name.
+     * Box illegal characters: \ / : * ? " < > |
+     */
+    private sanitizeName(name: string): string {
+        return name.replace(/[\\\/:*?"<>|]/g, '-').trim();
+    }
+
+    /**
+     * Ensure a subfolder exists within a parent folder.
+     */
+    public async getOrCreateSubfolder(parentFolderId: string, folderName: string): Promise<string> {
+        const sanitizedName = this.sanitizeName(folderName);
+        if (!sanitizedName) {
+            throw new Error(`Invalid folder name: "${folderName}" (sanitized to empty string)`);
+        }
+
+        try {
             // Check if folder already exists
-            const items = await this.client.folders.getFolderItems(effectiveParentId, {
-                queryParams: { fields: ['name', 'id'] },
+            const items = await this.client.folders.getFolderItems(parentFolderId, {
+                queryParams: { fields: ['name', 'id'], limit: 1000 },
             });
 
-            const existingFolder = items.entries?.find((item: any) => item.name === projectName && item.type === 'folder');
+            const existingFolder = items.entries?.find((item: any) =>
+                item.name.toLowerCase() === sanitizedName.toLowerCase() && item.type === 'folder'
+            );
             if (existingFolder) return existingFolder.id;
 
             // Create new folder
             const newFolder = await this.client.folders.createFolder({
-                name: projectName,
-                parent: { id: effectiveParentId },
+                name: sanitizedName,
+                parent: { id: parentFolderId },
             });
             return newFolder.id;
         } catch (error: any) {
-            console.error(`Error in getOrCreateProjectFolder for ${projectName}:`, error);
+            console.error(`Error in getOrCreateSubfolder for "${sanitizedName}" in ${parentFolderId}:`, error);
             throw error;
         }
     }

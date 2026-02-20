@@ -1,4 +1,4 @@
-import { useState, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useState, useRef, forwardRef, useImperativeHandle, useEffect } from 'react';
 import { Attachment } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ interface TicketAttachmentsProps {
     readOnly?: boolean;
     projectId: string;
     projectName?: string;
+    clientName?: string;
     ticketId: string;
 }
 
@@ -22,37 +23,49 @@ export interface TicketAttachmentsHandle {
 }
 
 export const TicketAttachments = forwardRef<TicketAttachmentsHandle, TicketAttachmentsProps>(
-    ({ attachments, onChange, readOnly, projectId, projectName, ticketId }, ref) => {
+    ({ attachments, onChange, readOnly, projectId, projectName, clientName, ticketId }, ref) => {
         const [isAdding, setIsAdding] = useState(false);
         const [isUploading, setIsUploading] = useState(false);
         const [newName, setNewName] = useState('');
         const [newUrl, setNewUrl] = useState('');
         const fileInputRef = useRef<HTMLInputElement>(null);
 
+        // Use ref to avoid stale closures in handles
+        const propsRef = useRef({ projectId, ticketId, projectName, clientName });
+        useEffect(() => {
+            propsRef.current = { projectId, ticketId, projectName, clientName };
+        }, [projectId, ticketId, projectName, clientName]);
+
         const uploadFile = async (file: File) => {
-            console.log('🚀 Starting upload for:', file.name, { projectId, ticketId });
+            const { projectId, ticketId, projectName, clientName } = propsRef.current;
+            console.log('🚀 [Attachments] Starting upload for:', file.name, { projectId, ticketId, projectName, clientName });
             try {
                 let folderId = customFolderId.trim();
 
                 if (!folderId) {
                     // 1. Get Folder ID (Project/Ticket specific) - organized by type
-                    console.log('⏳ Getting folder ID...');
+                    const body = {
+                        projectId,
+                        ticketId,
+                        projectName,
+                        clientName,
+                        fileName: file.name,
+                        mimeType: file.type
+                    };
+                    console.log('🚀 [Attachments] uploadFile props:', { projectId, ticketId, projectName, clientName });
+                    console.log('📡 [Attachments] POST /api/box/folder payload:', body);
+
                     const folderRes = await fetch('/api/box/folder', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            projectId,
-                            ticketId,
-                            projectName,
-                            fileName: file.name,
-                            mimeType: file.type
-                        }),
+                        body: JSON.stringify(body),
                     });
 
                     if (!folderRes.ok) {
                         const err = await folderRes.json().catch(() => ({ error: 'Unknown error' }));
+                        const msg = err.details ? `${err.error}: ${err.details}` : (err.error || folderRes.statusText);
                         console.error('❌ Folder API failed:', err);
-                        throw new Error(`Folder API failed: ${err.error}`);
+                        throw new Error(`Folder API failed: ${msg}`);
                     }
 
                     const data = await folderRes.json();

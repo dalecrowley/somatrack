@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Project } from '@/types';
 import { useProjects } from '@/hooks/useProjects';
+import { getClient } from '@/lib/services/client';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -14,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DescriptionEditor } from '@/components/ui/description-editor';
+import { DescriptionEditor, DescriptionEditorHandle } from '@/components/ui/description-editor';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useRef } from 'react';
 import { ImagePlus, X, Loader2 } from 'lucide-react';
@@ -35,6 +36,7 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [useDarkBackground, setUseDarkBackground] = useState(false);
+    const [clientName, setClientName] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -45,8 +47,30 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
             setUseDarkBackground(project.logoUseDarkBackground || false);
             setLogoFile(null);
             setError(null);
+
+            // Fetch client name
+            if (clientId) {
+                getClient(clientId).then(client => {
+                    if (client) setClientName(client.name);
+                });
+            }
+
+            // Sync editor content manually
+            descriptionEditorRef.current?.setContent(project.description || '');
         }
-    }, [project, open]);
+    }, [project, open, clientId]);
+
+    const descriptionEditorRef = useRef<DescriptionEditorHandle>(null);
+
+    const handleClose = (newOpen: boolean) => {
+        if (!newOpen) {
+            if (descriptionEditorRef.current?.isUploading) {
+                alert("Upload in progress. Please wait until it completes before closing.");
+                return;
+            }
+        }
+        onOpenChange(newOpen);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -63,7 +87,13 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
                 const folderRes = await fetch('/api/box/folder', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fileName: logoFile.name, mimeType: logoFile.type })
+                    body: JSON.stringify({
+                        fileName: logoFile.name,
+                        mimeType: logoFile.type,
+                        projectId: project.id,
+                        projectName: name,
+                        clientName: clientName
+                    })
                 });
                 const { folderId } = await folderRes.json();
 
@@ -129,7 +159,7 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleClose}>
             <DialogContent className="sm:max-w-[700px]">
                 <Form onSubmit={handleSubmit}>
                     <DialogHeader>
@@ -216,10 +246,12 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
                                     Description
                                 </Label>
                                 <DescriptionEditor
+                                    ref={descriptionEditorRef}
                                     content={description}
                                     onChange={setDescription}
                                     projectId={project.id}
-                                    projectName={project.name}
+                                    projectName={name}
+                                    clientName={clientName}
                                     placeholder="Add project overview, goals, etc..."
                                 />
                             </div>

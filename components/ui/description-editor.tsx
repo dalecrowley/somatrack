@@ -16,7 +16,7 @@ import {
     Image as ImageIcon,
     Loader2
 } from 'lucide-react';
-import { forwardRef, useImperativeHandle, useState } from 'react';
+import { forwardRef, useImperativeHandle, useState, useEffect, useRef } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -93,20 +93,30 @@ interface DescriptionEditorProps {
     projectId?: string;
     ticketId?: string;
     projectName?: string;
+    clientName?: string;
 }
 
 export interface DescriptionEditorHandle {
     uploadFiles: (files: File[]) => Promise<void>;
     insertLink: () => void;
     focus: () => void;
+    isUploading: boolean;
+    isReady: boolean;
+    setContent: (content: string) => void;
 }
 
 const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorProps>(
-    ({ content, onChange, placeholder = 'Add a description...', editable = true, projectId, ticketId, projectName }, ref) => {
+    ({ content, onChange, placeholder = 'Add a description...', editable = true, projectId, ticketId, projectName, clientName }, ref) => {
         const [isUploading, setIsUploading] = useState(false);
         const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false);
         const [linkUrl, setLinkUrl] = useState('');
         const [linkText, setLinkText] = useState('');
+
+        // Use ref to avoid stale closures in Tiptap/Imperative handles
+        const propsRef = useRef({ projectId, ticketId, projectName, clientName });
+        useEffect(() => {
+            propsRef.current = { projectId, ticketId, projectName, clientName };
+        }, [projectId, ticketId, projectName, clientName]);
 
         const editor = useEditor({
             extensions: [
@@ -128,11 +138,17 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
                     class: 'prose prose-sm max-w-none focus:outline-none min-h-[150px] p-4',
                 },
                 handleDrop: (view, event, slice, moved) => {
-                    console.log('💧 Drop event detected');
                     if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length > 0) {
                         event.preventDefault();
+                        event.stopPropagation();
+
+                        // Resolve drop position and sync selection so files land exactly where dropped
+                        const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+                        if (coordinates) {
+                            editor?.commands.setTextSelection(coordinates.pos);
+                        }
+
                         const files = Array.from(event.dataTransfer.files);
-                        console.log('📂 Files dropped:', files.map(f => f.name));
                         uploadFiles(files);
                         return true;
                     }
@@ -141,24 +157,30 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
             },
         });
 
-        const uploadFile = async (file: File) => {
-            console.log('🚀 Starting editor upload for:', file.name, { projectId, ticketId });
+        const uploadFile = async (file: File, retryCount = 0): Promise<any> => {
+            const { projectId, ticketId, projectName, clientName } = propsRef.current;
+            console.log(`🚀 [Editor] uploadFile ${file.name} (attempt ${retryCount + 1})`, { projectId, ticketId, projectName, clientName });
+
             try {
+                const body = {
+                    projectId,
+                    ticketId,
+                    projectName,
+                    clientName,
+                    fileName: file.name,
+                    mimeType: file.type
+                };
+
                 const folderRes = await fetch('/api/box/folder', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        projectId,
-                        ticketId,
-                        projectName,
-                        fileName: file.name,
-                        mimeType: file.type
-                    }),
+                    body: JSON.stringify(body),
                 });
 
                 if (!folderRes.ok) {
                     const err = await folderRes.json().catch(() => ({ error: 'Unknown error' }));
-                    throw new Error(`Failed to get folder ID: ${err.error || folderRes.statusText}`);
+                    const msg = err.details ? `${err.error}: ${err.details}` : (err.error || folderRes.statusText);
+                    throw new Error(`Failed to get folder ID: ${msg}`);
                 }
                 const { folderId } = await folderRes.json();
 
@@ -173,7 +195,21 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
 
                 if (!uploadRes.ok) {
                     const err = await uploadRes.json().catch(() => ({ error: 'Unknown error' }));
-                    throw new Error(`Upload failed: ${err.details || err.error || uploadRes.statusText}`);
+                    const errorMsg = err.details || err.error || uploadRes.statusText;
+
+                    // Handle 409 name_temporarily_reserved with retry
+                    const isConflict = uploadRes.status === 409 &&
+                        (errorMsg.includes('name_temporarily_reserved') ||
+                            (err.error && String(err.error).includes('name_temporarily_reserved')));
+
+                    if (isConflict && retryCount < 3) {
+                        const delay = 1000 * (retryCount + 1);
+                        console.warn(`⚠️ Box 409 conflict for ${file.name}. Retrying in ${delay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return uploadFile(file, retryCount + 1);
+                    }
+
+                    throw new Error(`Upload failed: ${errorMsg}`);
                 }
                 const boxFile = await uploadRes.json();
 
@@ -220,8 +256,17 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
         };
 
         const uploadFiles = async (files: File[]) => {
-            if (!editor) return;
+            if (!editor) {
+                console.warn('⚠️ DescriptionEditor.uploadFiles called but editor is not ready.');
+                return;
+            }
             setIsUploading(true);
+
+            // If the editor is not focused (e.g. drop on dialog background), 
+            // focus the end to avoid defaulting to position 0 (top of document)
+            if (!editor.isFocused) {
+                editor.commands.focus('end');
+            }
 
             for (const file of files) {
                 try {
@@ -231,21 +276,32 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
 
                     if (result.type === 'image' || ['audio', 'video', 'document'].includes(result.type)) {
                         console.log(`🎬 Inserting media node:`, result);
+
+                        // Insert at current selection
                         editor.chain()
                             .focus()
-                            .insertContent({
-                                type: 'media',
-                                attrs: result
-                            })
+                            .insertContent([
+                                { type: 'media', attrs: result },
+                                { type: 'paragraph' }
+                            ])
                             .run();
-                        console.log('✨ Insertion committed');
+                        console.log('✨ Insertion committed at cursor');
                     } else {
                         // Generic link for others
                         console.log('🔗 Inserting generic link:', result.name);
-                        editor.chain().focus()
-                            .extendMarkRange('link')
-                            .setLink({ href: result.url })
-                            .insertContent(result.name)
+                        editor.chain()
+                            .focus()
+                            .insertContent([
+                                {
+                                    type: 'text',
+                                    text: result.name,
+                                    marks: [{ type: 'link', attrs: { href: result.url } }]
+                                },
+                                {
+                                    type: 'text',
+                                    text: ' '
+                                }
+                            ])
                             .run();
                     }
                     console.log('📝 After Insertion HTML:', editor.getHTML());
@@ -315,6 +371,15 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
             uploadFiles,
             insertLink: handleOpenLinkPopover,
             focus: () => editor?.commands.focus(),
+            isUploading,
+            isReady: !!editor,
+            setContent: (newContent: string) => {
+                // Use setTimeout to avoid "flushSync was called from inside a lifecycle method"
+                // which happens when setContent is called during a React render/commit phase.
+                setTimeout(() => {
+                    editor?.commands.setContent(newContent, { emitUpdate: false });
+                }, 0);
+            },
         }));
 
         if (!editor) {

@@ -14,11 +14,12 @@ interface TicketCardProps {
     ticket: Ticket;
     index: number;
     projectName?: string;
+    clientName?: string;
     color?: string;
     statusLabel?: string;
 }
 
-export function TicketCard({ ticket, index, projectName, color, statusLabel }: TicketCardProps) {
+export function TicketCard({ ticket, index, projectName, clientName, color, statusLabel }: TicketCardProps) {
     const [isEditOpen, setIsEditOpen] = useState(false);
     const { users } = useUsers();
 
@@ -155,6 +156,7 @@ export function TicketCard({ ticket, index, projectName, color, statusLabel }: T
                 ticket={ticket}
                 projectId={ticket.projectId}
                 projectName={projectName}
+                clientName={clientName}
                 open={isEditOpen}
                 onOpenChange={setIsEditOpen}
                 color={color}

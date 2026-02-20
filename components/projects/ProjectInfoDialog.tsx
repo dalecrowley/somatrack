@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Project } from '@/types';
 import { useProject } from '@/hooks/useProject';
+import { getClient } from '@/lib/services/client';
+import { Client } from '@/types';
 import {
     Dialog,
     DialogContent,
@@ -35,6 +37,17 @@ export function ProjectInfoDialog({ project, open, onOpenChange }: ProjectInfoDi
     const projectId = project.id;
     const projectName = project.name;
 
+    const [resolvedClientName, setResolvedClientName] = useState('');
+
+    // Resolve client name independently for robustness
+    useEffect(() => {
+        if (project.clientId) {
+            getClient(project.clientId).then((c: Client | null) => {
+                if (c) setResolvedClientName(c.name);
+            });
+        }
+    }, [project.clientId]);
+
     const [title, setTitle] = useState(project.name);
     const [description, setDescription] = useState(project.description || '');
     const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -43,7 +56,6 @@ export function ProjectInfoDialog({ project, open, onOpenChange }: ProjectInfoDi
     const [tempTitle, setTempTitle] = useState(project.name);
     const [tempDesc, setTempDesc] = useState(project.description || '');
 
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const descriptionEditorRef = useRef<DescriptionEditorHandle>(null);
 
     useEffect(() => {
@@ -58,6 +70,9 @@ export function ProjectInfoDialog({ project, open, onOpenChange }: ProjectInfoDi
             if (project.description && project.description.trim() !== "") {
                 setIsEditingDesc(true);
             }
+
+            // Sync editor content manually
+            descriptionEditorRef.current?.setContent(project.description || '');
         }
     }, [open, project]);
 
@@ -87,11 +102,20 @@ export function ProjectInfoDialog({ project, open, onOpenChange }: ProjectInfoDi
         setIsDragging(false);
 
         const files = Array.from(e.dataTransfer.files);
-        if (files.length > 0 && descriptionEditorRef.current) {
+        if (files.length > 0) {
             if (!isEditingDesc) setIsEditingDesc(true);
-            setTimeout(() => {
-                descriptionEditorRef.current?.uploadFiles(files);
-            }, 100);
+
+            // We need to wait for the editor to mount if it wasn't already
+            let attempts = 0;
+            const tryUpload = () => {
+                if (descriptionEditorRef.current?.isReady) {
+                    descriptionEditorRef.current.uploadFiles(files);
+                } else if (attempts < 10) {
+                    attempts++;
+                    setTimeout(tryUpload, 100);
+                }
+            };
+            setTimeout(tryUpload, 100);
         }
     };
 
@@ -105,6 +129,10 @@ export function ProjectInfoDialog({ project, open, onOpenChange }: ProjectInfoDi
     const hasUnsavedDescription = isEditingDesc && tempDesc !== description;
 
     const handleClose = () => {
+        if (descriptionEditorRef.current?.isUploading) {
+            alert("Upload in progress. Please wait until it completes before closing.");
+            return;
+        }
         if (hasUnsavedDescription) {
             setShowUnsavedAlert(true);
         } else {
@@ -115,9 +143,15 @@ export function ProjectInfoDialog({ project, open, onOpenChange }: ProjectInfoDi
     return (
         <>
             <Dialog open={open} onOpenChange={(newOpen) => {
-                if (!newOpen && hasUnsavedDescription) {
-                    setShowUnsavedAlert(true);
-                    return;
+                if (!newOpen) {
+                    if (descriptionEditorRef.current?.isUploading) {
+                        alert("Upload in progress. Please wait until it completes before closing.");
+                        return;
+                    }
+                    if (hasUnsavedDescription) {
+                        setShowUnsavedAlert(true);
+                        return;
+                    }
                 }
                 onOpenChange(newOpen);
             }}>
@@ -206,7 +240,8 @@ export function ProjectInfoDialog({ project, open, onOpenChange }: ProjectInfoDi
                                                     content={tempDesc}
                                                     onChange={setTempDesc}
                                                     projectId={projectId}
-                                                    projectName={projectName}
+                                                    projectName={tempTitle}
+                                                    clientName={resolvedClientName}
                                                 />
                                                 <div className="flex items-center gap-2">
                                                     <Button
@@ -261,22 +296,6 @@ export function ProjectInfoDialog({ project, open, onOpenChange }: ProjectInfoDi
                                     </div>
                                 </div>
 
-                                {/* Hidden file input for sidebar triggers */}
-                                <input
-                                    type="file"
-                                    className="hidden"
-                                    ref={fileInputRef}
-                                    multiple
-                                    onChange={(e) => {
-                                        if (e.target.files && descriptionEditorRef.current) {
-                                            if (!isEditingDesc) setIsEditingDesc(true);
-                                            setTimeout(() => {
-                                                descriptionEditorRef.current?.uploadFiles(Array.from(e.target.files!));
-                                            }, 100);
-                                        }
-                                        e.target.value = '';
-                                    }}
-                                />
                             </div>
 
                             {/* Sidebar */}
@@ -288,17 +307,19 @@ export function ProjectInfoDialog({ project, open, onOpenChange }: ProjectInfoDi
                                         <Button
                                             variant="secondary"
                                             className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 text-foreground/80 transition-colors"
-                                            onClick={() => fileInputRef.current?.click()}
-                                        >
-                                            <Paperclip className="h-3.5 w-3.5 mr-2 opacity-70" />
-                                            Files
-                                        </Button>
-                                        <Button
-                                            variant="secondary"
-                                            className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 text-foreground/80 transition-colors"
                                             onClick={() => {
                                                 if (!isEditingDesc) setIsEditingDesc(true);
-                                                setTimeout(() => descriptionEditorRef.current?.insertLink(), 100);
+
+                                                let attempts = 0;
+                                                const tryLink = () => {
+                                                    if (descriptionEditorRef.current?.isReady) {
+                                                        descriptionEditorRef.current.insertLink();
+                                                    } else if (attempts < 10) {
+                                                        attempts++;
+                                                        setTimeout(tryLink, 100);
+                                                    }
+                                                };
+                                                setTimeout(tryLink, 100);
                                             }}
                                         >
                                             <Link2 className="h-3.5 w-3.5 mr-2 opacity-70" />

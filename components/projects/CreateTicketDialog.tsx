@@ -1,8 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTickets } from '@/hooks/useTickets';
+import { DescriptionEditor, DescriptionEditorHandle } from '@/components/ui/description-editor';
+import { useProject } from '@/hooks/useProject';
+import { getClient } from '@/lib/services/client';
+import { Client } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -16,11 +20,20 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, User, Calendar as CalendarIcon } from 'lucide-react';
-import { DescriptionEditor } from '@/components/ui/description-editor';
 import { TicketAssigneePicker } from './ticket/TicketAssigneePicker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 
 interface CreateTicketDialogProps {
@@ -54,6 +67,25 @@ export function CreateTicketDialog({
     const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
     const [ticketId, setTicketId] = useState(() => crypto.randomUUID());
     const [loading, setLoading] = useState(false);
+    const [showUnsavedAlert, setShowUnsavedAlert] = useState(false);
+
+    const descriptionEditorRef = useRef<DescriptionEditorHandle>(null);
+
+    const { project } = useProject(projectId);
+    const [resolvedProjectName, setResolvedProjectName] = useState('');
+    const [resolvedClientName, setResolvedClientName] = useState('');
+
+    // Resolve project and client names independently for robustness
+    useEffect(() => {
+        if (project) {
+            setResolvedProjectName(project.name);
+            if (project.clientId) {
+                getClient(project.clientId).then((c: Client | null) => {
+                    if (c) setResolvedClientName(c.name);
+                });
+            }
+        }
+    }, [project]);
 
     // Reset ticket state when dialog opens
     useEffect(() => {
@@ -63,8 +95,26 @@ export function CreateTicketDialog({
             setAssigneeIds([]);
             setDueDate(undefined);
             setTicketId(crypto.randomUUID());
+            // Force reset the editor content to clear any "ghost" state
+            descriptionEditorRef.current?.setContent('');
         }
     }, [open]);
+
+    const hasUnsavedChanges = title.trim() !== '' || (description && description.trim() !== '' && description !== '<p></p>');
+
+    const handleCloseInternal = (newOpen: boolean) => {
+        if (!newOpen) {
+            if (descriptionEditorRef.current?.isUploading) {
+                alert("Upload in progress. Please wait until it completes before closing.");
+                return;
+            }
+            if (hasUnsavedChanges) {
+                setShowUnsavedAlert(true);
+                return;
+            }
+        }
+        setOpen(newOpen);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -96,104 +146,140 @@ export function CreateTicketDialog({
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                {trigger || (
-                    <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Task
-                    </Button>
-                )}
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border-none shadow-2xl bg-[#F9FAFB] dark:bg-background">
-                <Form onSubmit={handleSubmit}>
-                    <DialogHeader className="p-6 pb-4 bg-gradient-to-br from-background to-muted/20 border-b">
-                        <DialogTitle className="text-xl font-bold">Create New Ticket</DialogTitle>
-                        <DialogDescription className="text-xs">
-                            Add a new task to organize your workspace.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-6 p-6">
-                        <div className="grid gap-3">
-                            <Label htmlFor="ticket-title" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                Title
-                            </Label>
-                            <Input
-                                id="ticket-title"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                placeholder="What needs to be done?"
-                                className="h-10 border-muted-foreground/20 focus-visible:ring-primary/30"
-                                autoFocus
-                                required
-                            />
-                        </div>
-                        <div className="grid gap-3">
-                            <Label htmlFor="ticket-description" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                Description
-                            </Label>
-                            <div className="bg-white dark:bg-card rounded-md border border-muted-foreground/20 overflow-hidden">
-                                <DescriptionEditor
-                                    content={description}
-                                    onChange={setDescription}
-                                    projectId={projectId}
-                                    ticketId={ticketId}
-                                    placeholder="Add more details and context..."
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-3">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                    Assignees
-                                </Label>
-                                <TicketAssigneePicker
-                                    value={assigneeIds}
-                                    onValueChange={setAssigneeIds}
-                                />
-                            </div>
-                            <div className="grid gap-3">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                    Due Date
-                                </Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="secondary"
-                                            className={cn(
-                                                "w-full justify-start h-8 px-2 text-xs font-normal transition-colors",
-                                                dueDate ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-muted/40 hover:bg-muted/80 text-foreground/80"
-                                            )}
-                                        >
-                                            <CalendarIcon className={cn("h-3.5 w-3.5 mr-2", dueDate ? "opacity-100" : "opacity-70")} />
-                                            {dueDate ? format(dueDate, "PPP") : "Set due date"}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            mode="single"
-                                            selected={dueDate}
-                                            onSelect={setDueDate}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                        </div>
-                    </div>
-                    <DialogFooter className="p-4 bg-muted/10 border-t">
-                        <Button
-                            type="submit"
-                            className="w-full sm:w-auto px-8"
-                            disabled={loading || !title.trim()}
-                        >
-                            {loading ? 'Creating...' : 'Create Ticket'}
+        <>
+            <Dialog open={open} onOpenChange={handleCloseInternal}>
+                <DialogTrigger asChild>
+                    {trigger || (
+                        <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Task
                         </Button>
-                    </DialogFooter>
-                </Form>
-            </DialogContent>
-        </Dialog>
+                    )}
+                </DialogTrigger>
+                <DialogContent
+                    className="sm:max-w-[600px] p-0 overflow-hidden border-none shadow-2xl bg-[#F9FAFB] dark:bg-background"
+                    onInteractOutside={(e) => {
+                        if (hasUnsavedChanges) {
+                            e.preventDefault();
+                            setShowUnsavedAlert(true);
+                        }
+                    }}
+                >
+                    <Form onSubmit={handleSubmit}>
+                        <DialogHeader className="p-6 pb-4 bg-gradient-to-br from-background to-muted/20 border-b">
+                            <DialogTitle className="text-xl font-bold">Create New Ticket</DialogTitle>
+                            <DialogDescription className="text-xs">
+                                Add a new task to organize your workspace.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-6 p-6">
+                            <div className="grid gap-3">
+                                <Label htmlFor="ticket-title" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    Title
+                                </Label>
+                                <Input
+                                    id="ticket-title"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder="What needs to be done?"
+                                    className="h-10 border-muted-foreground/20 focus-visible:ring-primary/30"
+                                    autoFocus
+                                    required
+                                />
+                            </div>
+                            <div className="grid gap-3">
+                                <Label htmlFor="ticket-description" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    Description
+                                </Label>
+                                <div className="bg-white dark:bg-card rounded-md border border-muted-foreground/20 overflow-hidden">
+                                    <DescriptionEditor
+                                        ref={descriptionEditorRef}
+                                        content={description}
+                                        onChange={setDescription}
+                                        projectId={projectId}
+                                        ticketId={ticketId}
+                                        projectName={resolvedProjectName}
+                                        clientName={resolvedClientName}
+                                        placeholder="Add more details and context..."
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-3">
+                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                        Assignees
+                                    </Label>
+                                    <TicketAssigneePicker
+                                        value={assigneeIds}
+                                        onValueChange={setAssigneeIds}
+                                    />
+                                </div>
+                                <div className="grid gap-3">
+                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                        Due Date
+                                    </Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="secondary"
+                                                className={cn(
+                                                    "w-full justify-start h-8 px-2 text-xs font-normal transition-colors",
+                                                    dueDate ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-muted/40 hover:bg-muted/80 text-foreground/80"
+                                                )}
+                                            >
+                                                <CalendarIcon className={cn("h-3.5 w-3.5 mr-2", dueDate ? "opacity-100" : "opacity-70")} />
+                                                {dueDate ? format(dueDate, "PPP") : "Set due date"}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="single"
+                                                selected={dueDate}
+                                                onSelect={setDueDate}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                            </div>
+                        </div>
+                        <DialogFooter className="p-4 bg-muted/10 border-t">
+                            <Button
+                                type="submit"
+                                className="w-full sm:w-auto px-8"
+                                disabled={loading || !title.trim()}
+                            >
+                                {loading ? 'Creating...' : 'Create Ticket'}
+                            </Button>
+                        </DialogFooter>
+                    </Form>
+                </DialogContent>
+            </Dialog>
+
+            <AlertDialog open={showUnsavedAlert} onOpenChange={setShowUnsavedAlert}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Discard New Ticket?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            You have entered information for a new ticket. Do you want to discard it?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setShowUnsavedAlert(false)}>Keep Editing</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                setShowUnsavedAlert(false);
+                                setOpen(false);
+                            }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            Discard
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 }
 

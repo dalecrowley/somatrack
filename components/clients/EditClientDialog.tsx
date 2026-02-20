@@ -59,7 +59,12 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                 const folderRes = await fetch('/api/box/folder', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fileName: logoFile.name, mimeType: logoFile.type })
+                    body: JSON.stringify({
+                        fileName: logoFile.name,
+                        mimeType: logoFile.type,
+                        clientName: name, // Top level folder
+                        projectName: 'Logos' // Subfolder for client logos
+                    })
                 });
                 const { folderId } = await folderRes.json();
 

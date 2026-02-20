@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProjects } from '@/hooks/useProjects';
+import { getClient } from '@/lib/services/client';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -33,6 +34,7 @@ export function CreateProjectDialog({ clientId }: CreateProjectDialogProps) {
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [useDarkBackground, setUseDarkBackground] = useState(false);
+    const [clientName, setClientName] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,6 +55,14 @@ export function CreateProjectDialog({ clientId }: CreateProjectDialogProps) {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
+    const [initialFetchDone, setInitialFetchDone] = useState(false);
+    if (!initialFetchDone && open && clientId) {
+        getClient(clientId).then(client => {
+            if (client) setClientName(client.name);
+            setInitialFetchDone(true);
+        });
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name.trim() || !user || !clientId) return;
@@ -68,7 +78,10 @@ export function CreateProjectDialog({ clientId }: CreateProjectDialogProps) {
                 const folderRes = await fetch('/api/box/folder', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fileName: logoFile.name, mimeType: logoFile.type })
+                    body: JSON.stringify({
+                        projectName: name, // Use the project name being created
+                        clientName: clientName
+                    })
                 });
                 const { folderId } = await folderRes.json();
 

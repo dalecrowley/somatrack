@@ -5,6 +5,8 @@ import { useTickets } from '@/hooks/useTickets';
 import { useProject } from '@/hooks/useProject';
 import { useUsers } from '@/hooks/useUsers';
 import { useAuthStore } from '@/lib/store/useAuthStore';
+import { getClient } from '@/lib/services/client';
+import { Client } from '@/types';
 import {
     Dialog,
     DialogContent,
@@ -20,7 +22,6 @@ import { TicketAttachments, TicketAttachmentsHandle } from './ticket/TicketAttac
 import { TicketComments } from './ticket/TicketComments';
 import { Trash2, X, User, MessageSquare, Paperclip, Check, Link2, Calendar, Archive, Upload } from 'lucide-react';
 import { Linkify } from '@/components/ui/linkify';
-import { TicketSidebarActions } from './ticket/TicketSidebarActions';
 import { DescriptionEditor, DescriptionEditorHandle } from '@/components/ui/description-editor';
 import { TicketAssigneePicker } from './ticket/TicketAssigneePicker';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -48,16 +49,35 @@ interface EditTicketDialogProps {
     ticket: Ticket;
     projectId: string;
     projectName?: string;
+    clientName?: string;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     color?: string;
 }
 
-export function EditTicketDialog({ ticket, projectId, projectName, open, onOpenChange, color: initialColor }: EditTicketDialogProps) {
+export function EditTicketDialog({ ticket, projectId, projectName, clientName, open, onOpenChange, color: initialColor }: EditTicketDialogProps) {
     const { editTicket, removeTicket, archiveTicket } = useTickets(projectId);
     const { project } = useProject(projectId);
     const { users } = useUsers();
     const currentUser = useAuthStore((state) => state.user);
+
+    const [resolvedProjectName, setResolvedProjectName] = useState(projectName || '');
+    const [resolvedClientName, setResolvedClientName] = useState(clientName || '');
+
+    // Resolve missing names independently for robustness
+    useEffect(() => {
+        if (project) {
+            if (!resolvedProjectName) setResolvedProjectName(project.name);
+
+            if (!resolvedClientName && project.clientId) {
+                getClient(project.clientId).then((c: Client | null) => {
+                    if (c) setResolvedClientName(c.name);
+                });
+            }
+        }
+    }, [project, resolvedProjectName, resolvedClientName]);
+
+    console.log(`🖼️ [EditTicketDialog:${ticket.id}] State:`, { resolvedProjectName, resolvedClientName, projectId });
 
     const [title, setTitle] = useState(ticket.title);
     const [description, setDescription] = useState(ticket.description);
@@ -85,7 +105,6 @@ export function EditTicketDialog({ ticket, projectId, projectName, open, onOpenC
 
 
     // Hidden file input for sidebar "Files" button
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const descriptionEditorRef = useRef<DescriptionEditorHandle>(null);
 
     // Legacy support: We might still have attachments in the DB, but we're moving to inline.
@@ -111,6 +130,9 @@ export function EditTicketDialog({ ticket, projectId, projectName, open, onOpenC
             if (ticket.description && ticket.description.trim() !== "") {
                 setIsEditingDesc(true);
             }
+
+            // Sync editor content manually
+            descriptionEditorRef.current?.setContent(ticket.description || '');
         }
     }, [open, ticket, initialColor]);
 
@@ -187,13 +209,21 @@ export function EditTicketDialog({ ticket, projectId, projectName, open, onOpenC
         setIsDragging(false);
 
         const files = Array.from(e.dataTransfer.files);
-        if (files.length > 0 && descriptionEditorRef.current) {
+        if (files.length > 0) {
             // Ensure we are in edit mode
             if (!isEditingDesc) setIsEditingDesc(true);
-            // Wait for render
-            setTimeout(() => {
-                descriptionEditorRef.current?.uploadFiles(files);
-            }, 100);
+
+            // We need to wait for the editor to mount if it wasn't already
+            let attempts = 0;
+            const tryUpload = () => {
+                if (descriptionEditorRef.current?.isReady) {
+                    descriptionEditorRef.current.uploadFiles(files);
+                } else if (attempts < 10) {
+                    attempts++;
+                    setTimeout(tryUpload, 100);
+                }
+            };
+            setTimeout(tryUpload, 100);
         }
     };
 
@@ -210,6 +240,12 @@ export function EditTicketDialog({ ticket, projectId, projectName, open, onOpenC
     const hasUnsavedDescription = isEditingDesc && tempDesc !== description;
 
     const handleClose = () => {
+        const isUploading = descriptionEditorRef.current?.isUploading;
+        if (isUploading) {
+            alert("Upload in progress. Please wait until it completes before closing.");
+            return;
+        }
+
         if (hasUnsavedDescription) {
             setShowUnsavedAlert(true);
         } else {
@@ -335,7 +371,8 @@ export function EditTicketDialog({ ticket, projectId, projectName, open, onOpenC
                                                         onChange={setTempDesc}
                                                         projectId={projectId}
                                                         ticketId={ticket.id}
-                                                        projectName={projectName}
+                                                        projectName={resolvedProjectName}
+                                                        clientName={resolvedClientName}
                                                     />
                                                     <div className="flex items-center gap-2">
                                                         <Button
@@ -391,25 +428,6 @@ export function EditTicketDialog({ ticket, projectId, projectName, open, onOpenC
                                     </div>
                                 </div>
 
-                                {/* Attachments Section REMOVED - integrated into editor */}
-                                {/* Hidden file input for sidebar triggers */}
-                                <input
-                                    type="file"
-                                    className="hidden"
-                                    ref={fileInputRef}
-                                    multiple
-                                    onChange={(e) => {
-                                        if (e.target.files && descriptionEditorRef.current) {
-                                            // Ensure we are in edit mode to insert
-                                            if (!isEditingDesc) setIsEditingDesc(true);
-                                            // Small timeout to allow render
-                                            setTimeout(() => {
-                                                descriptionEditorRef.current?.uploadFiles(Array.from(e.target.files!));
-                                            }, 100);
-                                        }
-                                        e.target.value = ''; // Reset
-                                    }}
-                                />
 
                                 {/* Discussion Area */}
                                 <div className="pt-8 border-t space-y-4">
@@ -480,17 +498,19 @@ export function EditTicketDialog({ ticket, projectId, projectName, open, onOpenC
                                         <Button
                                             variant="secondary"
                                             className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 text-foreground/80 transition-colors"
-                                            onClick={() => fileInputRef.current?.click()}
-                                        >
-                                            <Paperclip className="h-3.5 w-3.5 mr-2 opacity-70" />
-                                            Files
-                                        </Button>
-                                        <Button
-                                            variant="secondary"
-                                            className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 text-foreground/80 transition-colors"
                                             onClick={() => {
                                                 if (!isEditingDesc) setIsEditingDesc(true);
-                                                setTimeout(() => descriptionEditorRef.current?.insertLink(), 100);
+
+                                                let attempts = 0;
+                                                const tryLink = () => {
+                                                    if (descriptionEditorRef.current?.isReady) {
+                                                        descriptionEditorRef.current.insertLink();
+                                                    } else if (attempts < 10) {
+                                                        attempts++;
+                                                        setTimeout(tryLink, 100);
+                                                    }
+                                                };
+                                                setTimeout(tryLink, 100);
                                             }}
                                         >
                                             <Link2 className="h-3.5 w-3.5 mr-2 opacity-70" />

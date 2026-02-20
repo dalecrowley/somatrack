@@ -42,7 +42,6 @@ function SidebarAction({ icon: Icon, label, onClick, className }: SidebarActionP
 interface TicketSidebarActionsProps {
     onStatusClick?: () => void;
     onAssignClick?: () => void;
-    onFilesClick?: () => void;
     onLinkClick?: () => void;
     onDueDateClick?: () => void;
     onArchiveClick?: () => void;
@@ -51,7 +50,6 @@ interface TicketSidebarActionsProps {
 export function TicketSidebarActions({
     onStatusClick,
     onAssignClick,
-    onFilesClick,
     onLinkClick,
     onDueDateClick,
     onArchiveClick
@@ -62,7 +60,6 @@ export function TicketSidebarActions({
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1 mb-2">Actions</p>
                 <SidebarAction icon={Flag} label="Status" onClick={onStatusClick} />
                 <SidebarAction icon={UserPlus} label="Assign" onClick={onAssignClick} />
-                <SidebarAction icon={Paperclip} label="Files" onClick={onFilesClick} />
                 <SidebarAction icon={Link2} label="Link" onClick={onLinkClick} />
                 <SidebarAction icon={Calendar} label="Due date" onClick={onDueDateClick} />
             </div>
