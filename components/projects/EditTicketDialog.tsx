@@ -373,25 +373,28 @@ export function EditTicketDialog({ ticket, projectId, projectName, clientName, o
                                                         ticketId={ticket.id}
                                                         projectName={resolvedProjectName}
                                                         clientName={resolvedClientName}
+                                                        onDropFiles={() => setIsDragging(false)}
                                                     />
-                                                    <div className="flex items-center gap-2">
-                                                        <Button
-                                                            onClick={handleSaveDesc}
-                                                            className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3 text-xs"
-                                                        >
-                                                            Update description
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            onClick={() => {
-                                                                setTempDesc(description);
-                                                                setIsEditingDesc(false);
-                                                            }}
-                                                            className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground"
-                                                        >
-                                                            Cancel
-                                                        </Button>
-                                                    </div>
+                                                    {tempDesc !== description && (
+                                                        <div className="flex items-center gap-2">
+                                                            <Button
+                                                                onClick={handleSaveDesc}
+                                                                className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3 text-xs"
+                                                            >
+                                                                Update description
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                onClick={() => {
+                                                                    setTempDesc(description);
+                                                                    setIsEditingDesc(false);
+                                                                }}
+                                                                className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground"
+                                                            >
+                                                                Cancel
+                                                            </Button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <div
@@ -399,20 +402,31 @@ export function EditTicketDialog({ ticket, projectId, projectName, clientName, o
                                                         "group relative min-h-[40px] transition-all",
                                                         !description && "cursor-pointer"
                                                     )}
-                                                    onClick={() => !description && setIsEditingDesc(true)}
+                                                    onClick={() => {
+                                                        if (!description) {
+                                                            setIsEditingDesc(true);
+                                                            setTimeout(() => descriptionEditorRef.current?.focus(), 100);
+                                                        }
+                                                    }}
                                                 >
                                                     {description ? (
                                                         <div className="space-y-4">
                                                             <div
                                                                 className="text-sm text-foreground/80 leading-relaxed cursor-pointer hover:bg-muted/10 p-2 -m-2 rounded transition-colors prose prose-sm max-w-none"
-                                                                onClick={() => setIsEditingDesc(true)}
+                                                                onClick={() => {
+                                                                    setIsEditingDesc(true);
+                                                                    setTimeout(() => descriptionEditorRef.current?.focus(), 100);
+                                                                }}
                                                                 dangerouslySetInnerHTML={{ __html: description }}
                                                             />
                                                             <Button
                                                                 variant="secondary"
                                                                 size="sm"
                                                                 className="bg-[#EDEDED] text-[#4A4A4A] hover:bg-[#E0E0E0] h-8 px-4 font-normal text-xs transition-transform active:scale-95"
-                                                                onClick={() => setIsEditingDesc(true)}
+                                                                onClick={() => {
+                                                                    setIsEditingDesc(true);
+                                                                    setTimeout(() => descriptionEditorRef.current?.focus(), 100);
+                                                                }}
                                                             >
                                                                 Edit description
                                                             </Button>

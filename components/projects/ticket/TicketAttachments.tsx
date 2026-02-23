@@ -26,6 +26,7 @@ export const TicketAttachments = forwardRef<TicketAttachmentsHandle, TicketAttac
     ({ attachments, onChange, readOnly, projectId, projectName, clientName, ticketId }, ref) => {
         const [isAdding, setIsAdding] = useState(false);
         const [isUploading, setIsUploading] = useState(false);
+        const [pendingUploads, setPendingUploads] = useState<{ [key: string]: { name: string, progress: number } }>({});
         const [newName, setNewName] = useState('');
         const [newUrl, setNewUrl] = useState('');
         const fileInputRef = useRef<HTMLInputElement>(null);
@@ -36,7 +37,7 @@ export const TicketAttachments = forwardRef<TicketAttachmentsHandle, TicketAttac
             propsRef.current = { projectId, ticketId, projectName, clientName };
         }, [projectId, ticketId, projectName, clientName]);
 
-        const uploadFile = async (file: File) => {
+        const uploadFile = async (file: File, onProgress?: (percent: number) => void) => {
             const { projectId, ticketId, projectName, clientName } = propsRef.current;
             console.log('🚀 [Attachments] Starting upload for:', file.name, { projectId, ticketId, projectName, clientName });
             try {
@@ -75,29 +76,44 @@ export const TicketAttachments = forwardRef<TicketAttachmentsHandle, TicketAttac
                     console.log('📂 Using custom folder ID:', folderId);
                 }
 
-                // 2. Upload to Box via our server proxy
-                console.log('⏳ Uploading to proxy...');
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('folderId', folderId || '0');
+                // 2. Upload with XHR for progress
+                const boxFile = await new Promise<any>((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('folderId', folderId || '0');
 
-                const uploadRes = await fetch('/api/box/upload', {
-                    method: 'POST',
-                    body: formData,
+                    xhr.upload.onprogress = (event) => {
+                        if (event.lengthComputable && onProgress) {
+                            const percent = (event.loaded / event.total) * 100;
+                            onProgress(percent);
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            try {
+                                resolve(JSON.parse(xhr.responseText));
+                            } catch (e) {
+                                reject(new Error('Invalid response from server'));
+                            }
+                        } else {
+                            const err = JSON.parse(xhr.responseText || '{}');
+                            const errorToThrow = new Error(`Upload failed: ${err.error || xhr.statusText}`);
+                            (errorToThrow as any).details = err.details || err.code || '';
+                            reject(errorToThrow);
+                        }
+                    };
+
+                    xhr.onerror = () => reject(new Error('Network error during upload'));
+
+                    xhr.open('POST', '/api/box/upload');
+                    xhr.send(formData);
                 });
 
-                if (!uploadRes.ok) {
-                    const err = await uploadRes.json().catch(() => ({ error: 'Unknown error' }));
-                    console.error('❌ Upload API failed:', err);
-                    const errorToThrow = new Error(`Upload API failed: ${err.error}`);
-                    (errorToThrow as any).details = err.details || err.code || '';
-                    throw errorToThrow;
-                }
-
-                const boxFile = await uploadRes.json();
                 console.log('✅ Uploaded to Box:', boxFile.id);
 
-                // 3. Finalize on server (generate shared link, etc.)
+                // 3. Finalize
                 console.log('⏳ Finalizing...');
                 const finalizeRes = await fetch('/api/box/finalize', {
                     method: 'POST',
@@ -157,11 +173,25 @@ export const TicketAttachments = forwardRef<TicketAttachmentsHandle, TicketAttac
             try {
                 const newAttachments: Attachment[] = [];
                 for (const file of files) {
+                    const uploadId = crypto.randomUUID();
+                    setPendingUploads(prev => ({ ...prev, [uploadId]: { name: file.name, progress: 0 } }));
+
                     try {
-                        const attachment = await uploadFile(file);
+                        const attachment = await uploadFile(file, (percent) => {
+                            setPendingUploads(prev => ({
+                                ...prev,
+                                [uploadId]: { ...prev[uploadId], progress: percent }
+                            }));
+                        });
                         newAttachments.push(attachment);
                     } catch (error: any) {
                         alert(error.message);
+                    } finally {
+                        setPendingUploads(prev => {
+                            const next = { ...prev };
+                            delete next[uploadId];
+                            return next;
+                        });
                     }
                 }
                 if (newAttachments.length > 0) {
@@ -291,14 +321,21 @@ export const TicketAttachments = forwardRef<TicketAttachmentsHandle, TicketAttac
                             No attachments yet.
                         </p>
                     )}
-                    {isUploading && (
-                        <div className="flex items-center justify-center p-8 border border-dashed rounded-md bg-muted/10">
-                            <div className="flex flex-col items-center gap-2">
-                                <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
-                                <p className="text-sm text-muted-foreground">Uploading to Box...</p>
+                    {Object.entries(pendingUploads).map(([id, upload]) => (
+                        <div key={id} className="p-4 border border-dashed rounded-md bg-indigo-50/20 border-indigo-200 flex flex-col gap-2">
+                            <div className="flex items-center gap-2 text-indigo-600">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span className="text-xs font-medium truncate flex-1">Uploading {upload.name}...</span>
+                                <span className="text-[10px] font-bold">{Math.round(upload.progress)}%</span>
+                            </div>
+                            <div className="w-full h-1 bg-indigo-100 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-indigo-500 transition-all duration-300"
+                                    style={{ width: `${upload.progress}%` }}
+                                />
                             </div>
                         </div>
-                    )}
+                    ))}
                 </div>
             </div>
         );

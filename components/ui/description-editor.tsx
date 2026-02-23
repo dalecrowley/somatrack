@@ -1,6 +1,6 @@
 'use client';
 
-import { useEditor, EditorContent, Editor, Node, ReactNodeViewRenderer, mergeAttributes } from '@tiptap/react';
+import { useEditor, EditorContent, Editor, Node, ReactNodeViewRenderer, mergeAttributes, NodeViewWrapper } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
@@ -37,6 +37,13 @@ declare module '@tiptap/core' {
                 uploadedBy?: string;
             }) => ReturnType;
         };
+        loadingMedia: {
+            setLoadingMedia: (options: {
+                id: string;
+                name: string;
+                progress: number;
+            }) => ReturnType;
+        };
     }
 }
 
@@ -58,6 +65,7 @@ const MediaExtension = Node.create({
             url: { default: null },
             uploadedAt: { default: null },
             uploadedBy: { default: null },
+            width: { default: '30%' },
         };
     },
 
@@ -85,6 +93,65 @@ const MediaExtension = Node.create({
     },
 });
 
+// Custom Loading Media Extension
+const LoadingMediaExtension = Node.create({
+    name: 'loadingMedia',
+    group: 'block',
+    atom: true,
+    selectable: true,
+    draggable: false,
+
+    addAttributes() {
+        return {
+            id: { default: null },
+            name: { default: 'Uploading...' },
+            progress: { default: 0 },
+        };
+    },
+
+    parseHTML() {
+        return [{ tag: 'div[data-loading-media-node]' }];
+    },
+
+    renderHTML({ HTMLAttributes }) {
+        return ['div', mergeAttributes(HTMLAttributes, { 'data-loading-media-node': 'true' })];
+    },
+
+    addNodeView() {
+        return ReactNodeViewRenderer(({ node }) => {
+            const { name, progress } = node.attrs;
+            return (
+                <NodeViewWrapper className="my-4">
+                    <div className="p-4 border border-indigo-200 bg-indigo-50/30 rounded-lg flex flex-col gap-2">
+                        <div className="flex items-center gap-2 text-indigo-600">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="text-sm font-medium">Uploading {name}...</span>
+                            <span className="ml-auto text-xs font-bold">{Math.round(progress)}%</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-indigo-100 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-indigo-500 transition-all duration-300"
+                                style={{ width: `${progress}%` }}
+                            />
+                        </div>
+                    </div>
+                </NodeViewWrapper>
+            );
+        });
+    },
+
+    addCommands() {
+        return {
+            setLoadingMedia: (options) => ({ commands }) => {
+                return commands.insertContent({
+                    type: this.name,
+                    attrs: options,
+                });
+            },
+        };
+    },
+});
+
 interface DescriptionEditorProps {
     content: string;
     onChange: (html: string) => void;
@@ -94,6 +161,7 @@ interface DescriptionEditorProps {
     ticketId?: string;
     projectName?: string;
     clientName?: string;
+    onDropFiles?: () => void;
 }
 
 export interface DescriptionEditorHandle {
@@ -106,17 +174,17 @@ export interface DescriptionEditorHandle {
 }
 
 const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorProps>(
-    ({ content, onChange, placeholder = 'Add a description...', editable = true, projectId, ticketId, projectName, clientName }, ref) => {
+    ({ content, onChange, placeholder = 'Add a description...', editable = true, projectId, ticketId, projectName, clientName, onDropFiles }, ref) => {
         const [isUploading, setIsUploading] = useState(false);
         const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false);
         const [linkUrl, setLinkUrl] = useState('');
         const [linkText, setLinkText] = useState('');
 
         // Use ref to avoid stale closures in Tiptap/Imperative handles
-        const propsRef = useRef({ projectId, ticketId, projectName, clientName });
+        const propsRef = useRef({ projectId, ticketId, projectName, clientName, onDropFiles });
         useEffect(() => {
-            propsRef.current = { projectId, ticketId, projectName, clientName };
-        }, [projectId, ticketId, projectName, clientName]);
+            propsRef.current = { projectId, ticketId, projectName, clientName, onDropFiles };
+        }, [projectId, ticketId, projectName, clientName, onDropFiles]);
 
         const editor = useEditor({
             extensions: [
@@ -125,6 +193,7 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
                     placeholder,
                 }),
                 MediaExtension,
+                LoadingMediaExtension,
             ],
             content: content,
             editable: editable,
@@ -150,18 +219,34 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
 
                         const files = Array.from(event.dataTransfer.files);
                         uploadFiles(files);
+
+                        if (propsRef.current.onDropFiles) {
+                            propsRef.current.onDropFiles();
+                        }
+
                         return true;
                     }
+                    return false;
+                },
+                handleClick: (view, pos, event) => {
+                    // If the user clicks into an already focused editor, 
+                    // we might want to let them place the cursor normally.
+                    // But if it's the first click or click on container, 
+                    // maybe we apply the logic.
+                    // The request says "when clicking in an edit box, please place the cursor on a new line after the last line"
+                    // To be safe and less intrusive, we'll primarily rely on the .focus() call
+                    // but we can add logic here if needed.
                     return false;
                 }
             },
         });
 
-        const uploadFile = async (file: File, retryCount = 0): Promise<any> => {
+        const uploadFile = async (file: File, retryCount = 0, onProgress?: (percent: number) => void): Promise<any> => {
             const { projectId, ticketId, projectName, clientName } = propsRef.current;
             console.log(`🚀 [Editor] uploadFile ${file.name} (attempt ${retryCount + 1})`, { projectId, ticketId, projectName, clientName });
 
             try {
+                // 1. Get/Create folder
                 const body = {
                     projectId,
                     ticketId,
@@ -184,35 +269,59 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
                 }
                 const { folderId } = await folderRes.json();
 
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('folderId', folderId || '0');
+                // 2. Upload with XHR for progress
+                const boxFile = await new Promise<any>((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('folderId', folderId || '0');
 
-                const uploadRes = await fetch('/api/box/upload', {
-                    method: 'POST',
-                    body: formData,
+                    xhr.upload.onprogress = (event) => {
+                        if (event.lengthComputable && onProgress) {
+                            const percent = (event.loaded / event.total) * 100;
+                            onProgress(percent);
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            try {
+                                resolve(JSON.parse(xhr.responseText));
+                            } catch (e) {
+                                reject(new Error('Invalid response from server'));
+                            }
+                        } else {
+                            // Handle 409 conflict like before
+                            let errBody: any = {};
+                            try { errBody = JSON.parse(xhr.responseText); } catch (e) { }
+                            const errorMsg = errBody.details || errBody.error || xhr.statusText;
+
+                            const isConflict = xhr.status === 409 &&
+                                (errorMsg.includes('name_temporarily_reserved') ||
+                                    (errBody.error && String(errBody.error).includes('name_temporarily_reserved')));
+
+                            if (isConflict && retryCount < 3) {
+                                resolve('RETRY');
+                            } else {
+                                reject(new Error(`Upload failed: ${errorMsg}`));
+                            }
+                        }
+                    };
+
+                    xhr.onerror = () => reject(new Error('Network error during upload'));
+
+                    xhr.open('POST', '/api/box/upload');
+                    xhr.send(formData);
                 });
 
-                if (!uploadRes.ok) {
-                    const err = await uploadRes.json().catch(() => ({ error: 'Unknown error' }));
-                    const errorMsg = err.details || err.error || uploadRes.statusText;
-
-                    // Handle 409 name_temporarily_reserved with retry
-                    const isConflict = uploadRes.status === 409 &&
-                        (errorMsg.includes('name_temporarily_reserved') ||
-                            (err.error && String(err.error).includes('name_temporarily_reserved')));
-
-                    if (isConflict && retryCount < 3) {
-                        const delay = 1000 * (retryCount + 1);
-                        console.warn(`⚠️ Box 409 conflict for ${file.name}. Retrying in ${delay}ms...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        return uploadFile(file, retryCount + 1);
-                    }
-
-                    throw new Error(`Upload failed: ${errorMsg}`);
+                if (boxFile === 'RETRY') {
+                    const delay = 1000 * (retryCount + 1);
+                    console.warn(`⚠️ Box 409 conflict for ${file.name}. Retrying in ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return uploadFile(file, retryCount + 1, onProgress);
                 }
-                const boxFile = await uploadRes.json();
 
+                // 3. Finalize
                 const finalizeRes = await fetch('/api/box/finalize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -269,44 +378,89 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
             }
 
             for (const file of files) {
+                const uploadId = crypto.randomUUID();
                 try {
                     console.log('⏳ Starting upload for:', file.name);
-                    const result = await uploadFile(file);
+
+                    // 1. Insert loading node
+                    editor.chain()
+                        .focus()
+                        .insertContent({
+                            type: 'loadingMedia',
+                            attrs: { id: uploadId, name: file.name, progress: 0 }
+                        })
+                        .run();
+
+                    const onProgress = (percent: number) => {
+                        const { tr } = editor.state;
+                        let dispatch = false;
+
+                        editor.state.doc.descendants((node, pos) => {
+                            if (node.type.name === 'loadingMedia' && node.attrs.id === uploadId) {
+                                tr.setNodeMarkup(pos, undefined, {
+                                    ...node.attrs,
+                                    progress: percent
+                                });
+                                dispatch = true;
+                                return false;
+                            }
+                        });
+
+                        if (dispatch) {
+                            editor.view.dispatch(tr);
+                        }
+                    };
+
+                    const result = await uploadFile(file, 0, onProgress);
                     console.log('✅ Upload result:', result);
 
-                    if (result.type === 'image' || ['audio', 'video', 'document'].includes(result.type)) {
-                        console.log(`🎬 Inserting media node:`, result);
+                    // 2. Remove loading node and insert actual media
+                    // We need to find the position again because it might have moved
+                    let nodeFound = false;
+                    editor.state.doc.descendants((node, pos) => {
+                        if (node.type.name === 'loadingMedia' && node.attrs.id === uploadId) {
+                            nodeFound = true;
 
-                        // Insert at current selection
-                        editor.chain()
-                            .focus()
-                            .insertContent([
-                                { type: 'media', attrs: result },
-                                { type: 'paragraph' }
-                            ])
-                            .run();
-                        console.log('✨ Insertion committed at cursor');
-                    } else {
-                        // Generic link for others
-                        console.log('🔗 Inserting generic link:', result.name);
-                        editor.chain()
-                            .focus()
-                            .insertContent([
-                                {
-                                    type: 'text',
-                                    text: result.name,
-                                    marks: [{ type: 'link', attrs: { href: result.url } }]
-                                },
-                                {
-                                    type: 'text',
-                                    text: ' '
-                                }
-                            ])
-                            .run();
-                    }
-                    console.log('📝 After Insertion HTML:', editor.getHTML());
+                            if (result.type === 'image' || ['audio', 'video', 'document'].includes(result.type)) {
+                                editor.chain()
+                                    .deleteRange({ from: pos, to: pos + node.nodeSize })
+                                    .insertContentAt(pos, [
+                                        {
+                                            type: 'media',
+                                            attrs: {
+                                                ...result,
+                                                width: (result.type === 'image' || result.type === 'video') ? '30%' : undefined
+                                            }
+                                        },
+                                        { type: 'paragraph' }
+                                    ])
+                                    .run();
+                            } else {
+                                editor.chain()
+                                    .deleteRange({ from: pos, to: pos + node.nodeSize })
+                                    .insertContentAt(pos, [
+                                        {
+                                            type: 'text',
+                                            text: result.name,
+                                            marks: [{ type: 'link', attrs: { href: result.url } }]
+                                        },
+                                        { type: 'text', text: ' ' }
+                                    ])
+                                    .run();
+                            }
+                            return false;
+                        }
+                    });
+
                 } catch (error: any) {
                     console.error('❌ Upload/Insertion error:', error);
+                    // Remove loading node on error
+                    editor.state.doc.descendants((node, pos) => {
+                        if (node.type.name === 'loadingMedia' && node.attrs.id === uploadId) {
+                            editor.commands.deleteRange({ from: pos, to: pos + node.nodeSize });
+                            return false;
+                        }
+                    });
                     alert(error.message || `Failed to upload ${file.name}`);
                 }
             }
@@ -367,10 +521,30 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
             }
         };
 
+        const focusAtEndWithNewLine = () => {
+            if (!editor) return;
+
+            // 1. Focus at the very end
+            editor.commands.focus('end');
+
+            // 2. Check if the last node is already an empty paragraph
+            const { state } = editor;
+            const lastNode = state.doc.lastChild;
+            const isLastNodeEmptyParagraph = lastNode?.type.name === 'paragraph' && lastNode.content.size === 0;
+
+            if (!isLastNodeEmptyParagraph) {
+                // Insert a new paragraph if the last one isn't empty
+                editor.chain()
+                    .insertContentAt(state.doc.content.size, { type: 'paragraph' })
+                    .focus('end')
+                    .run();
+            }
+        };
+
         useImperativeHandle(ref, () => ({
             uploadFiles,
             insertLink: handleOpenLinkPopover,
-            focus: () => editor?.commands.focus(),
+            focus: focusAtEndWithNewLine,
             isUploading,
             isReady: !!editor,
             setContent: (newContent: string) => {
@@ -387,7 +561,14 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
         }
 
         return (
-            <div className="border rounded-md bg-white overflow-hidden flex flex-col min-h-[200px]">
+            <div
+                className="border rounded-md bg-white overflow-hidden flex flex-col min-h-[200px]"
+                onClick={() => {
+                    if (!editor.isFocused) {
+                        focusAtEndWithNewLine();
+                    }
+                }}
+            >
                 {editable && (
                     <div className="flex items-center gap-1 p-1 border-b bg-muted/40 flex-wrap">
                         <Button
