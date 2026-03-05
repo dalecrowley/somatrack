@@ -38,8 +38,12 @@ export const signInWithGoogle = async () => {
             throw new Error(`Only @${ALLOWED_DOMAIN} emails are allowed to sign in.`);
         }
 
-        // Create or update user document in Firestore
-        await createOrUpdateUser(user);
+        // Admin detection
+        const ADMIN_EMAIL = 'dale.crowley@somatone.com';
+        const role = (user.email?.toLowerCase() === ADMIN_EMAIL) ? 'admin' : 'member';
+
+        // Create or update user document in Firestore with role detection
+        await createOrUpdateUser(user, role);
         return user;
     } catch (error: any) {
         console.error('Error signing in with Google popup:', error);
@@ -71,7 +75,7 @@ export const signOut = async () => {
 /**
  * Create or update user document in Firestore
  */
-const createOrUpdateUser = async (user: User) => {
+const createOrUpdateUser = async (user: User, explicitRole?: 'admin' | 'member') => {
     const userRef = doc(db, 'users', user.uid);
     const userSnap = await getDoc(userRef);
 
@@ -82,20 +86,19 @@ const createOrUpdateUser = async (user: User) => {
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
-            role: 'member', // Default role
+            role: explicitRole || 'member', // Use explicit role if provided, else default to member
             createdAt: serverTimestamp(),
             lastLogin: serverTimestamp(),
         });
     } else {
         // Existing user - update last login
-        console.log('Updating existing user document for:', user.uid);
-        await setDoc(
-            userRef,
-            {
-                lastLogin: serverTimestamp(),
-            },
-            { merge: true }
-        );
+        const updateData: any = {
+            lastLogin: serverTimestamp(),
+        };
+        if (explicitRole) {
+            updateData.role = explicitRole;
+        }
+        await setDoc(userRef, updateData, { merge: true });
     }
 };
 

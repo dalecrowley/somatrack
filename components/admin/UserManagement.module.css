@@ -1,0 +1,116 @@
+.container {
+    padding: 1.5rem;
+    background: rgba(20, 20, 20, 0.85);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    color: #e0e0e0;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    margin-top: 2rem;
+}
+
+.title {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.6rem;
+    margin-bottom: 0.5rem;
+    color: #ffcc00;
+}
+
+.form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.input,
+.select {
+    flex: 1 1 150px;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #444;
+    border-radius: 6px;
+    background: rgba(30, 30, 30, 0.9);
+    color: #fff;
+}
+
+.button {
+    background: #ffcc00;
+    color: #222;
+    border: none;
+    border-radius: 6px;
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+.button:hover {
+    transform: scale(1.05);
+}
+
+.error {
+    color: #ff6b6b;
+    margin-top: 0.5rem;
+}
+
+.success {
+    color: #4caf50;
+    margin-top: 0.5rem;
+}
+
+.subTitle {
+    margin-top: 1rem;
+    font-size: 1.2rem;
+    color: #ccc;
+}
+
+.list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.listItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid #333;
+}
+
+.userInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.userName {
+    font-weight: 500;
+    color: #fff;
+    font-size: 0.95rem;
+}
+
+.userEmail {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.role {
+    font-size: 0.8rem;
+    color: #aaa;
+    margin: 0 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.deleteBtn {
+    background: #ff6b6b;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
+}
+
+.deleteBtn:hover {
+    opacity: 0.9;
+}

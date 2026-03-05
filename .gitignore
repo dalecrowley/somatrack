@@ -42,6 +42,7 @@ next-env.d.ts
 
 # Firebase Admin Service Account Key
 firebase-admin-key.json
+google-credentials.json
 
 # IDEs
 .vscode/

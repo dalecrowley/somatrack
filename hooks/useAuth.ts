@@ -55,3 +55,7 @@ export const useAuth = () => {
 
     return { user, userData, loading };
 };
+export const useIsAdmin = () => {
+    const { userData } = useAuth();
+    return userData?.role === 'admin';
+};
