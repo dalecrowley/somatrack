@@ -5,6 +5,7 @@ import { Play, Pause, FileText, ImageIcon, Music, Video, ExternalLink, Trash2 } 
 import { Attachment } from '@/types';
 import { NodeViewWrapper } from '@tiptap/react';
 import { cn } from '@/lib/utils';
+import { getIdToken } from '@/lib/firebase/auth';
 
 interface MediaPreviewProps {
     attachment?: Attachment;
@@ -19,6 +20,11 @@ export function MediaPreview({ attachment: propAttachment, node, updateAttribute
     const waveformRef = useRef<HTMLDivElement>(null);
     const wavesurfer = useRef<WaveSurfer | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [authToken, setAuthToken] = useState<string | null>(null);
+
+    useEffect(() => {
+        getIdToken().then(setAuthToken);
+    }, []);
 
     // Resizing state
     const [isResizing, setIsResizing] = useState(false);
@@ -107,14 +113,16 @@ export function MediaPreview({ attachment: propAttachment, node, updateAttribute
         const isInteractive = attachment.type === 'image' || attachment.type === 'video';
 
         if (attachment.type === 'image' || attachment.type === 'document' || attachment.type === 'video') {
+            const tokenParam = authToken ? `?token=${authToken}` : '';
+
             const displayUrl = (attachment.type === 'image' || attachment.type === 'video') && attachment.boxFileId
-                ? `/api/box/content/${attachment.boxFileId}`
+                ? `/api/box/content/${attachment.boxFileId}${tokenParam}`
                 : attachment.boxFileId
-                    ? `/api/box/thumbnail/${attachment.boxFileId}`
+                    ? `/api/box/thumbnail/${attachment.boxFileId}${tokenParam}`
                     : (attachment.boxSharedLink || attachment.url);
 
             const posterUrl = attachment.boxFileId && attachment.type === 'video'
-                ? `/api/box/thumbnail/${attachment.boxFileId}`
+                ? `/api/box/thumbnail/${attachment.boxFileId}${tokenParam}`
                 : '';
 
             return (

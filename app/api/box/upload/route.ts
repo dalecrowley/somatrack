@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { boxService } from '@/lib/box/service';
+import { verifySession } from '@/lib/api/auth';
 
 export async function POST(req: NextRequest) {
+    const { errorResponse } = await verifySession(req);
+    if (errorResponse) return errorResponse;
     try {
         const formData = await req.formData();
         const file = formData.get('file') as File;

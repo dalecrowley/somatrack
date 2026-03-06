@@ -2,14 +2,23 @@ import { NextResponse } from 'next/server';
 import { parseTimeEntry, formatDateForSheet } from '@/lib/utils/timeEntryParser';
 import { employeeSheets, projectAliases } from '@/lib/config/timeTracking';
 import { getSpreadsheetDetails, updateTimeEntry, checkConflicts } from '@/lib/services/googleSheets';
+import { verifySession } from '@/lib/api/auth';
 
 export async function POST(request: Request) {
+    const { user, errorResponse } = await verifySession(request);
+    if (errorResponse) return errorResponse;
+
     try {
         const body = await request.json();
         const { text, userEmail, ignoreConflicts } = body;
 
         if (!text || !userEmail) {
             return NextResponse.json({ error: 'Text and userEmail are required' }, { status: 400 });
+        }
+
+        // Security check: Ensure the user is only logging time for themselves
+        if (user!.email !== userEmail && user!.role !== 'admin') {
+            return NextResponse.json({ error: 'Forbidden: You can only log time for your own account' }, { status: 403 });
         }
 
         // 1. Look up user's spreadsheet configuration

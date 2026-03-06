@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { boxService } from '@/lib/box/service';
+import { verifySession } from '@/lib/api/auth';
 
 export async function POST(request: Request) {
+    const { errorResponse } = await verifySession(request);
+    if (errorResponse) return errorResponse;
     try {
         const { fileId } = await request.json();
 

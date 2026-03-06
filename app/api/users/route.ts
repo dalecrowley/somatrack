@@ -2,11 +2,15 @@ import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import type { UserProfile } from '@/types';
 import { FieldValue } from 'firebase-admin/firestore';
+import { verifySession } from '@/lib/api/auth';
 
 /**
- * GET /api/users - List all users (admin only)
+ * GET /api/users - List all users (any authenticated member)
  */
-export async function GET() {
+export async function GET(request: Request) {
+    const { user, errorResponse } = await verifySession(request);
+    if (errorResponse) return errorResponse;
+
     try {
         const snapshot = await adminDb.collection('users').get();
         const users: UserProfile[] = snapshot.docs.map((doc) => ({ uid: doc.id, ...doc.data() } as UserProfile));
@@ -18,10 +22,12 @@ export async function GET() {
 }
 
 /**
- * POST /api/users - Invite/create a user entry
- * Body: { email: string; displayName?: string; role?: 'admin' | 'member' }
+ * POST /api/users - Invite/create a user entry (Admin only)
  */
 export async function POST(request: Request) {
+    const { user, errorResponse } = await verifySession(request, true); // true = require admin
+    if (errorResponse) return errorResponse;
+
     try {
         const { email, displayName, role = 'member' } = (await request.json()) as {
             email: string;
@@ -32,7 +38,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Email is required' }, { status: 400 });
         }
 
-        // Use Node.js built-in crypto for UUID generation
         const uid = crypto.randomUUID();
 
         await adminDb.collection('users').doc(uid).set({
@@ -42,6 +47,7 @@ export async function POST(request: Request) {
             role,
             createdAt: FieldValue.serverTimestamp(),
             lastLogin: null,
+            invitedBy: user!.email // Track who invited them
         });
         return NextResponse.json({ uid }, { status: 201 });
     } catch (error: any) {
@@ -51,9 +57,12 @@ export async function POST(request: Request) {
 }
 
 /**
- * DELETE /api/users?uid=USER_ID - Remove a user entry
+ * DELETE /api/users?uid=USER_ID - Remove a user entry (Admin only)
  */
 export async function DELETE(request: Request) {
+    const { user, errorResponse } = await verifySession(request, true); // true = require admin
+    if (errorResponse) return errorResponse;
+
     try {
         const { searchParams } = new URL(request.url);
         const uid = searchParams.get('uid');
@@ -61,7 +70,7 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'uid query param required' }, { status: 400 });
         }
 
-        console.log(`🗑️ API: Deleting user ${uid}`);
+        console.log(`🗑️ API: User ${user!.email} deleting user ${uid}`);
         await adminDb.collection('users').doc(uid).delete();
 
         return NextResponse.json({ success: true }, { status: 200 });

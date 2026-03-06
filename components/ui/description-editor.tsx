@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { MediaPreview } from '../projects/ticket/MediaPreview';
+import { getIdToken } from '@/lib/firebase/auth';
 
 declare module '@tiptap/core' {
     interface Commands<ReturnType> {
@@ -256,9 +257,13 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
                     mimeType: file.type
                 };
 
+                const token = await getIdToken();
                 const folderRes = await fetch('/api/box/folder', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: JSON.stringify(body),
                 });
 
@@ -311,6 +316,9 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
                     xhr.onerror = () => reject(new Error('Network error during upload'));
 
                     xhr.open('POST', '/api/box/upload');
+                    if (token) {
+                        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                    }
                     xhr.send(formData);
                 });
 
@@ -324,7 +332,10 @@ const DescriptionEditor = forwardRef<DescriptionEditorHandle, DescriptionEditorP
                 // 3. Finalize
                 const finalizeRes = await fetch('/api/box/finalize', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: JSON.stringify({ fileId: boxFile.id }),
                 });
 

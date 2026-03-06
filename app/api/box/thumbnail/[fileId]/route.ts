@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { boxService } from '@/lib/box/service';
 import { Readable } from 'stream';
+import { verifySession } from '@/lib/api/auth';
 
 export async function GET(
     req: NextRequest,
     context: { params: Promise<{ fileId: string }> }
 ) {
+    const { errorResponse } = await verifySession(req);
+    if (errorResponse) return errorResponse;
     try {
         const { fileId } = await context.params;
 

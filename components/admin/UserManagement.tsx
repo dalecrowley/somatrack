@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { useUsers } from '@/hooks/useUsers';
+import { signInWithGoogle, getIdToken } from '@/lib/firebase/auth';
 import { useIsAdmin } from '@/hooks/useAuth';
 import { AdminOnly } from '@/components/admin/AdminOnly';
 import { UserProfile } from '@/types';
@@ -36,9 +37,13 @@ export const UserManagement = () => {
         console.log('🚀 Attempting to invite user:', { email, role });
 
         try {
+            const token = await getIdToken();
             const res = await fetch('/api/users', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({ email, displayName, role }),
             });
 

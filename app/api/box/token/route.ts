@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { BoxService } from '@/lib/box/service';
+import { verifySession } from '@/lib/api/auth';
 
-// In Next.js App Router, we export named functions for each HTTP method.
+export async function GET(request: Request) {
+    const { errorResponse } = await verifySession(request);
+    if (errorResponse) return errorResponse;
 
-export async function GET() {
     try {
         const boxService = BoxService.getInstance();
         const token = await boxService.getAccessToken();

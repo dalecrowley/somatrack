@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/lib/store/useAuthStore';
+import { getIdToken } from '@/lib/firebase/auth';
 import {
     Dialog,
     DialogContent,
@@ -177,9 +178,13 @@ export default function MagicBoxDialog({ open, onOpenChange }: MagicBoxDialogPro
         setConflicts([]);
 
         try {
+            const token = await getIdToken();
             const res = await fetch('/api/time-entry', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify(body),
             });
 
@@ -246,9 +251,13 @@ export default function MagicBoxDialog({ open, onOpenChange }: MagicBoxDialogPro
         setGridMessage('Syncing all entries to Google Sheets...');
 
         try {
+            const token = await getIdToken();
             const res = await fetch('/api/time-entry/bulk', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     userEmail,
                     entries: filledEntries.map((e) => ({

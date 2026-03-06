@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { employeeSheets } from '@/lib/config/timeTracking';
 import { getSpreadsheetDetails, updateTimeEntry } from '@/lib/services/googleSheets';
+import { verifySession } from '@/lib/api/auth';
 
 interface BulkEntry {
     project: string;
@@ -9,6 +10,9 @@ interface BulkEntry {
 }
 
 export async function POST(request: Request) {
+    const { user, errorResponse } = await verifySession(request);
+    if (errorResponse) return errorResponse;
+
     try {
         const body = await request.json();
         const { userEmail, entries, ignoreConflicts } = body as {
@@ -19,6 +23,11 @@ export async function POST(request: Request) {
 
         if (!userEmail || !entries || !Array.isArray(entries) || entries.length === 0) {
             return NextResponse.json({ error: 'userEmail and entries[] are required' }, { status: 400 });
+        }
+
+        // Security check: Ensure the user is only logging time for themselves
+        if (user!.email !== userEmail && user!.role !== 'admin') {
+            return NextResponse.json({ error: 'Forbidden: You can only log time for your own account' }, { status: 403 });
         }
 
         const sheetConfig = employeeSheets[userEmail];

@@ -103,6 +103,14 @@ const createOrUpdateUser = async (user: User, explicitRole?: 'admin' | 'member')
 };
 
 /**
+ * Get current user's ID token
+ */
+export const getIdToken = async () => {
+    if (!auth.currentUser) return null;
+    return auth.currentUser.getIdToken(true);
+};
+
+/**
  * Subscribe to auth state changes
  */
 export const onAuthChange = (callback: (user: User | null) => void) => {
