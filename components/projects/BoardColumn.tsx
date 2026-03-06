@@ -53,7 +53,7 @@ export function BoardColumn({ id, title, tickets, projectId, color }: BoardColum
             </div>
 
             <div className="p-3 mt-auto border-t shrink-0">
-                <CreateTicketDialog projectId={projectId} columnId={id} />
+                <CreateTicketDialog projectId={projectId} defaultStatusId={id} />
             </div>
         </div>
     );
