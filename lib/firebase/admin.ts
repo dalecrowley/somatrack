@@ -1,4 +1,4 @@
-import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
 const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
@@ -15,8 +15,19 @@ if (getApps().length === 0) {
     if (envServiceAccount) {
         try {
             const serviceAccount = JSON.parse(envServiceAccount);
-            const { cert } = require('firebase-admin/app');
+
+            // Fix for private key newline issues in some environment variable setups
+            if (serviceAccount.private_key && typeof serviceAccount.private_key === 'string') {
+                serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+            }
+
             adminConfig.credential = cert(serviceAccount);
+
+            // If projectId was missing from env but present in service account, use it
+            if (!adminConfig.projectId && serviceAccount.project_id) {
+                adminConfig.projectId = serviceAccount.project_id;
+            }
+
             console.log('📦 Loaded Firebase Admin service account from FIREBASE_SERVICE_ACCOUNT env var');
         } catch (e) {
             console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT env var:', e);
@@ -30,12 +41,11 @@ if (getApps().length === 0) {
 
             if (fs.existsSync(keyPath)) {
                 const serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
-                const { cert } = require('firebase-admin/app');
                 adminConfig.credential = cert(serviceAccount);
                 console.log('📦 Loaded Firebase Admin service account from firebase-admin-key.json');
             }
         } catch (e) {
-            // Fallback to default behavior
+            console.error('❌ Error loading local service account:', e);
         }
     }
 

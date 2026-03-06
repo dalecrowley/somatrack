@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
-import { v4 as uuidv4 } from 'uuid';
 import type { UserProfile } from '@/types';
 import { FieldValue } from 'firebase-admin/firestore';
 
@@ -12,9 +11,9 @@ export async function GET() {
         const snapshot = await adminDb.collection('users').get();
         const users: UserProfile[] = snapshot.docs.map((doc) => ({ uid: doc.id, ...doc.data() } as UserProfile));
         return NextResponse.json({ users }, { status: 200 });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching users:', error);
-        return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to fetch users', details: error.message }, { status: 500 });
     }
 }
 
@@ -32,7 +31,10 @@ export async function POST(request: Request) {
         if (!email) {
             return NextResponse.json({ error: 'Email is required' }, { status: 400 });
         }
-        const uid = uuidv4(); // placeholder until real auth user signs in
+
+        // Use Node.js built-in crypto for UUID generation
+        const uid = crypto.randomUUID();
+
         await adminDb.collection('users').doc(uid).set({
             email,
             displayName: displayName ?? null,
@@ -42,9 +44,9 @@ export async function POST(request: Request) {
             lastLogin: null,
         });
         return NextResponse.json({ uid }, { status: 201 });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error creating user:', error);
-        return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to create user', details: error.message }, { status: 500 });
     }
 }
 
@@ -58,10 +60,13 @@ export async function DELETE(request: Request) {
         if (!uid) {
             return NextResponse.json({ error: 'uid query param required' }, { status: 400 });
         }
+
+        console.log(`🗑️ API: Deleting user ${uid}`);
         await adminDb.collection('users').doc(uid).delete();
+
         return NextResponse.json({ success: true }, { status: 200 });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error deleting user:', error);
-        return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to delete user', details: error.message }, { status: 500 });
     }
 }
