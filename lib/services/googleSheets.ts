@@ -9,10 +9,25 @@ export async function initializeSheets() {
     if (sheetsClient) return true;
 
     try {
-        // Path adjusted for standard Next.js directory structure where process.cwd() is the project root
-        const keyPath = path.join(process.cwd(), 'google-credentials.json');
-        const keyFile = await readFile(keyPath, 'utf-8');
-        const credentials = JSON.parse(keyFile);
+        let credentials;
+        const envServiceAccount = process.env.GOOGLE_SHEETS_SERVICE_ACCOUNT;
+
+        if (envServiceAccount) {
+            try {
+                credentials = JSON.parse(envServiceAccount);
+                console.log('✅ Google Sheets service account from GOOGLE_SHEETS_SERVICE_ACCOUNT env var');
+            } catch (e) {
+                console.error('❌ Failed to parse GOOGLE_SHEETS_SERVICE_ACCOUNT env var:', e);
+            }
+        }
+
+        if (!credentials) {
+            // Path adjusted for standard Next.js directory structure where process.cwd() is the project root
+            const keyPath = path.join(process.cwd(), 'google-credentials.json');
+            const keyFile = await readFile(keyPath, 'utf-8');
+            credentials = JSON.parse(keyFile);
+            console.log('✅ Google Sheets loaded from google-credentials.json');
+        }
 
         const auth = new google.auth.GoogleAuth({
             credentials,
