@@ -1,5 +1,4 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
     
@@ -8,28 +7,38 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Helper to check for Somatone domain
+    function isSomatoneUser() {
+      return isAuthenticated() && request.auth.token.email.split('@')[1] == 'somatone.com';
+    }
+
+    // Helper to check for Admin role (reads from the user document)
+    function isAdmin() {
+      return isSomatoneUser() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     // Users collection
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isSomatoneUser();
       // Allow users to write their own profile
-      allow write: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isSomatoneUser() && request.auth.uid == userId;
     }
 
     // Clients collection
     match /clients/{clientId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow read: if isSomatoneUser();
+      allow write: if isAdmin(); // Only admins can manage clients
     }
 
-    // Projects collection (replaces projectGroups)
+    // Projects collection
     match /projects/{projectId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow read: if isSomatoneUser();
+      allow write: if isSomatoneUser(); // Members can manage projects/tickets
 
       // Tickets subcollection
       match /tickets/{ticketId} {
-        allow read: if isAuthenticated();
-        allow write: if isAuthenticated();
+        allow read: if isSomatoneUser();
+        allow write: if isSomatoneUser();
       }
     }
   }
