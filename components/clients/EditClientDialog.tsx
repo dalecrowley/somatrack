@@ -33,6 +33,7 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [useDarkBackground, setUseDarkBackground] = useState(false);
+    const [authToken, setAuthToken] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -43,6 +44,7 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
             setLogoFile(null);
             setError(null);
         }
+        getIdToken().then(setAuthToken);
     }, [client, open]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -161,7 +163,7 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                                 >
                                     {logoPreview ? (
                                         <img
-                                            src={logoPreview}
+                                            src={logoPreview.includes('/api/box/') && authToken ? `${logoPreview}?token=${authToken}` : logoPreview}
                                             alt="Logo preview"
                                             className="h-full w-full object-contain p-2"
                                         />
