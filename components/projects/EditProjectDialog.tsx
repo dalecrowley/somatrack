@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Project } from '@/types';
 import { useProjects } from '@/hooks/useProjects';
 import { getClient } from '@/lib/services/client';
+import { getIdToken } from '@/lib/firebase/auth';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -84,9 +85,13 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
             // Upload logo to Box if a NEW file is selected
             if (logoFile) {
                 // 1. Get routing folder for images
+                const token = await getIdToken();
                 const folderRes = await fetch('/api/box/folder', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: JSON.stringify({
                         fileName: logoFile.name,
                         mimeType: logoFile.type,
@@ -107,6 +112,9 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
 
                 const uploadRes = await fetch('/api/box/upload', {
                     method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: formData
                 });
 

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ExternalLink, Trash2, Plus, Paperclip, Upload, Loader2, Download } from 'lucide-react';
 import { MediaPreview } from './MediaPreview';
+import { getIdToken } from '@/lib/firebase/auth';
 
 interface TicketAttachmentsProps {
     attachments: Attachment[];
@@ -56,9 +57,13 @@ export const TicketAttachments = forwardRef<TicketAttachmentsHandle, TicketAttac
                     console.log('🚀 [Attachments] uploadFile props:', { projectId, ticketId, projectName, clientName });
                     console.log('📡 [Attachments] POST /api/box/folder payload:', body);
 
+                    const token = await getIdToken();
                     const folderRes = await fetch('/api/box/folder', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
                         body: JSON.stringify(body),
                     });
 
@@ -77,6 +82,7 @@ export const TicketAttachments = forwardRef<TicketAttachmentsHandle, TicketAttac
                 }
 
                 // 2. Upload with XHR for progress
+                const uploadToken = await getIdToken();
                 const boxFile = await new Promise<any>((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
                     const formData = new FormData();
@@ -108,6 +114,9 @@ export const TicketAttachments = forwardRef<TicketAttachmentsHandle, TicketAttac
                     xhr.onerror = () => reject(new Error('Network error during upload'));
 
                     xhr.open('POST', '/api/box/upload');
+                    if (uploadToken) {
+                        xhr.setRequestHeader('Authorization', `Bearer ${uploadToken}`);
+                    }
                     xhr.send(formData);
                 });
 
@@ -115,9 +124,13 @@ export const TicketAttachments = forwardRef<TicketAttachmentsHandle, TicketAttac
 
                 // 3. Finalize
                 console.log('⏳ Finalizing...');
+                const finalizeToken = await getIdToken();
                 const finalizeRes = await fetch('/api/box/finalize', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${finalizeToken}`
+                    },
                     body: JSON.stringify({ fileId: boxFile.id }),
                 });
 

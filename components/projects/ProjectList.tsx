@@ -8,6 +8,8 @@ import { Project } from '@/types';
 import { useProjects } from '@/hooks/useProjects';
 import { EditProjectDialog } from './EditProjectDialog';
 import { Button } from '@/components/ui/button';
+import { getIdToken } from '@/lib/firebase/auth';
+import { useEffect } from 'react';
 import {
     Card,
     CardContent,
@@ -44,6 +46,11 @@ export function ProjectList({ projects, isLoading, clientId }: ProjectListProps)
     const { removeProject, archiveProject } = useProjects(clientId);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [editingProject, setEditingProject] = useState<Project | null>(null);
+    const [authToken, setAuthToken] = useState<string | null>(null);
+
+    useEffect(() => {
+        getIdToken().then(setAuthToken);
+    }, []);
 
     const handleDelete = async () => {
         if (deleteId) {
@@ -154,7 +161,11 @@ export function ProjectList({ projects, isLoading, clientId }: ProjectListProps)
                                 {project.logoUrl ? (
                                     <div className={`h-20 w-full rounded-xl border border-muted-foreground/10 flex items-center justify-center transition-colors ${project.logoUseDarkBackground ? 'bg-zinc-900 border-zinc-800' : 'bg-white/50'
                                         }`}>
-                                        <img src={project.logoUrl} alt={`${project.name} logo`} className="max-h-[70%] max-w-[90%] object-contain" />
+                                        <img
+                                            src={project.logoUrl.includes('/api/box/') && authToken ? `${project.logoUrl}?token=${authToken}` : project.logoUrl}
+                                            alt={`${project.name} logo`}
+                                            className="max-h-[70%] max-w-[90%] object-contain"
+                                        />
                                     </div>
                                 ) : (
                                     <div className="h-20 w-full flex items-center justify-start opacity-10">

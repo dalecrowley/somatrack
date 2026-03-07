@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useClients } from '@/hooks/useClients';
+import { getIdToken } from '@/lib/firebase/auth';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -63,9 +64,13 @@ export function CreateClientDialog() {
             // Upload logo to Box if present
             if (logoFile) {
                 // 1. Get routing folder for images
+                const token = await getIdToken();
                 const folderRes = await fetch('/api/box/folder', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: JSON.stringify({
                         clientName: name, // Top level folder
                         projectName: 'Logos' // Subfolder for client logos
@@ -83,6 +88,9 @@ export function CreateClientDialog() {
 
                 const uploadRes = await fetch('/api/box/upload', {
                     method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: formData
                 });
 
