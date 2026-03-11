@@ -36,9 +36,16 @@ export const UserManagement = () => {
         setIsSubmitting(true);
 
         console.log('🚀 Attempting to invite user:', { email, role });
+        setError(null);
 
         try {
             const token = await getIdToken();
+            if (!token) {
+                console.warn('⚠️ No auth token found during invite');
+                throw new Error('Unauthorized: No active session found. Please try logging out and back in.');
+            }
+
+            console.log('🛰️ Sending invite request for:', email);
             const res = await fetch('/api/users', {
                 method: 'POST',
                 headers: {
@@ -56,7 +63,7 @@ export const UserManagement = () => {
             }
 
             console.log('✅ Invite successful:', data);
-            setSuccess(`Invitation created for ${email}`);
+            setSuccess(data.updated ? `Role updated for existing user ${email}` : `Invitation created for ${email}`);
             setEmail('');
             setDisplayName('');
             setRole('member');
@@ -73,6 +80,10 @@ export const UserManagement = () => {
         setSuccess(null);
         try {
             const token = await getIdToken();
+            if (!token) {
+                throw new Error('Unauthorized: No active session found. Please try logging out and back in.');
+            }
+            
             const res = await fetch('/api/users', {
                 method: 'PATCH',
                 headers: {
@@ -100,8 +111,16 @@ export const UserManagement = () => {
         console.log('🗑️ Attempting to delete user:', uid);
 
         try {
+            const token = await getIdToken();
+            if (!token) {
+                throw new Error('Unauthorized: No active session found. Please try logging out and back in.');
+            }
+
             const res = await fetch(`/api/users?uid=${uid}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             });
 
             const data = await res.json();

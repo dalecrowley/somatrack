@@ -28,28 +28,44 @@ export async function POST(request: Request) {
     const { user, errorResponse } = await verifySession(request, true); // true = require admin
     if (errorResponse) return errorResponse;
 
-    try {
-        const { email, displayName, role = 'member' } = (await request.json()) as {
-            email: string;
-            displayName?: string;
-            role?: 'admin' | 'member';
-        };
-        if (!email) {
-            return NextResponse.json({ error: 'Email is required' }, { status: 400 });
-        }
+        try {
+            const { email, displayName, role = 'member' } = (await request.json()) as {
+                email: string;
+                displayName?: string;
+                role?: 'admin' | 'member';
+            };
+            if (!email) {
+                return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+            }
 
-        const uid = crypto.randomUUID();
+            const normalizedEmail = email.toLowerCase().trim();
 
-        await adminDb.collection('users').doc(uid).set({
-            email,
-            displayName: displayName ?? null,
-            photoURL: null,
-            role,
-            createdAt: FieldValue.serverTimestamp(),
-            lastLogin: null,
-            invitedBy: user!.email // Track who invited them
-        });
-        return NextResponse.json({ uid }, { status: 201 });
+            // Check if user already exists
+            const existingQuery = await adminDb.collection('users').where('email', '==', normalizedEmail).get();
+            
+            if (!existingQuery.empty) {
+                console.log(`👤 API: User with email ${normalizedEmail} already exists. Updating role instead.`);
+                const existingDoc = existingQuery.docs[0];
+                await existingDoc.ref.update({
+                    role,
+                    updatedBy: user!.email,
+                    updatedAt: FieldValue.serverTimestamp()
+                });
+                return NextResponse.json({ uid: existingDoc.id, updated: true }, { status: 200 });
+            }
+
+            const uid = crypto.randomUUID();
+
+            await adminDb.collection('users').doc(uid).set({
+                email: normalizedEmail,
+                displayName: displayName ?? null,
+                photoURL: null,
+                role,
+                createdAt: FieldValue.serverTimestamp(),
+                lastLogin: null,
+                invitedBy: user!.email
+            });
+            return NextResponse.json({ uid, invited: true }, { status: 201 });
     } catch (error: any) {
         console.error('Error creating user:', error);
         return NextResponse.json({ error: 'Failed to create user', details: error.message }, { status: 500 });

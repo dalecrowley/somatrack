@@ -7,7 +7,17 @@ import {
     GoogleAuthProvider,
     User,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { 
+    doc, 
+    setDoc, 
+    getDoc, 
+    serverTimestamp,
+    collection,
+    query,
+    where,
+    getDocs,
+    deleteDoc
+} from 'firebase/firestore';
 import { auth, db } from './config';
 
 // Set persistence to local (survives browser restart)
@@ -81,24 +91,70 @@ const createOrUpdateUser = async (user: User, fixedRole?: 'admin' | 'member') =>
     const userSnap = await getDoc(userRef);
 
     if (!userSnap.exists()) {
-        // New user - create document
-        console.log('Creating new user document for:', user.uid);
-        await setDoc(userRef, {
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
-            role: fixedRole || 'member', // Use fixed role if provided, else default to member
-            createdAt: serverTimestamp(),
-            lastLogin: serverTimestamp(),
-        });
+        // User document doesn't exist by UID. Check if they were invited by email.
+        console.log('User document not found for UID:', user.uid, 'Checking for invited account by email:', user.email);
+        
+        try {
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('email', '==', user.email));
+            const querySnap = await getDocs(q);
+            
+            if (!querySnap.empty) {
+                // Found invited account(s). Use the first one and clean up.
+                const invitedDoc = querySnap.docs[0];
+                const invitedData = invitedDoc.data();
+                
+                console.log('Found invited account. Migrating data to UID:', user.uid);
+                
+                await setDoc(userRef, {
+                    ...invitedData,
+                    uid: user.uid,
+                    displayName: user.displayName || invitedData.displayName,
+                    photoURL: user.photoURL || invitedData.photoURL,
+                    role: fixedRole || invitedData.role || 'member',
+                    lastLogin: serverTimestamp(),
+                });
+                
+                // Delete the old placeholder document
+                await deleteDoc(invitedDoc.ref);
+                
+                // Clean up any other duplicates with the same email
+                if (querySnap.size > 1) {
+                    for (let i = 1; i < querySnap.size; i++) {
+                        await deleteDoc(querySnap.docs[i].ref);
+                    }
+                }
+            } else {
+                // Truly new user - create document
+                console.log('Creating new user document for:', user.uid);
+                await setDoc(userRef, {
+                    email: user.email,
+                    displayName: user.displayName,
+                    photoURL: user.photoURL,
+                    role: fixedRole || 'member',
+                    createdAt: serverTimestamp(),
+                    lastLogin: serverTimestamp(),
+                    uid: user.uid
+                });
+            }
+        } catch (error) {
+            console.error('Error during user document migration/creation:', error);
+            // Fallback: build the doc anyway so they can log in
+            await setDoc(userRef, {
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+                role: fixedRole || 'member',
+                lastLogin: serverTimestamp(),
+                uid: user.uid
+            }, { merge: true });
+        }
     } else {
         // Existing user - update last login
         const updateData: any = {
             lastLogin: serverTimestamp(),
         };
         
-        // If a fixed role is provided (e.g. from INITIAL_ADMINS), enforce it
-        // Otherwise, keep the existing role in the document
         if (fixedRole === 'admin') {
             updateData.role = 'admin';
         }
