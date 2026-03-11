@@ -91,12 +91,13 @@ const createOrUpdateUser = async (user: User, fixedRole?: 'admin' | 'member') =>
     const userSnap = await getDoc(userRef);
 
     if (!userSnap.exists()) {
-        // User document doesn't exist by UID. Check if they were invited by email.
-        console.log('User document not found for UID:', user.uid, 'Checking for invited account by email:', user.email);
+        const normalizedEmail = user.email?.toLowerCase().trim();
+        console.log('User document not found for UID:', user.uid, 'Checking for invited account by email:', normalizedEmail);
         
         try {
             const usersRef = collection(db, 'users');
-            const q = query(usersRef, where('email', '==', user.email));
+            // We use the normalized email for the query
+            const q = query(usersRef, where('email', '==', normalizedEmail));
             const querySnap = await getDocs(q);
             
             if (!querySnap.empty) {

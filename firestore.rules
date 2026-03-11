@@ -28,6 +28,10 @@ service cloud.firestore {
         request.auth.uid == userId && 
         (request.resource.data.role == resource.data.role || request.resource.data.role != 'admin')
       );
+
+      // Allow migration: user can delete an old placeholder if the email matches their verified email
+      allow delete: if isSomatoneUser() && 
+                   resource.data.email.lower() == request.auth.token.email.lower();
     }
 
     // Clients collection
