@@ -3,7 +3,7 @@
 import { useState, FormEvent } from 'react';
 import { useUsers } from '@/hooks/useUsers';
 import { signInWithGoogle, getIdToken } from '@/lib/firebase/auth';
-import { useIsAdmin } from '@/hooks/useAuth';
+import { useIsAdmin, useAuth } from '@/hooks/useAuth';
 import { AdminOnly } from '@/components/admin/AdminOnly';
 import { UserProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 export const UserManagement = () => {
     const { users, loading } = useUsers();
     const isAdmin = useIsAdmin();
+    const { userData: currentUser } = useAuth();
     const [email, setEmail] = useState('');
     const [displayName, setDisplayName] = useState('');
     const [role, setRole] = useState<'admin' | 'member'>('member');
@@ -64,6 +65,30 @@ export const UserManagement = () => {
             setError(err.message);
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleRoleUpdate = async (uid: string, newRole: 'admin' | 'member') => {
+        setError(null);
+        setSuccess(null);
+        try {
+            const token = await getIdToken();
+            const res = await fetch('/api/users', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ uid, role: newRole }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to update role');
+
+            setSuccess('User role updated successfully');
+        } catch (err: any) {
+            console.error('❌ Role update failed:', err);
+            setError(err.message || 'Failed to update role');
         }
     };
 
@@ -185,18 +210,33 @@ export const UserManagement = () => {
                                                     <span className="font-medium">{u.displayName || 'Unnamed User'}</span>
                                                     <span className="text-xs text-muted-foreground">{u.email || 'No email'}</span>
                                                 </div>
-                                                <Badge variant={u.role === 'admin' ? 'default' : 'secondary'} className="ml-2 uppercase text-[10px] tracking-widest px-1.5 h-4">
-                                                    {u.role}
-                                                </Badge>
                                             </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon-sm"
-                                                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                                onClick={() => handleDelete(u.uid, u.email || 'this user')}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+
+                                            <div className="flex items-center gap-2">
+                                                <Select 
+                                                    value={u.role} 
+                                                    onValueChange={(v: 'admin' | 'member') => handleRoleUpdate(u.uid, v)}
+                                                    disabled={u.uid === currentUser?.uid}
+                                                >
+                                                    <SelectTrigger className="w-32 h-8 text-xs">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="member">Member</SelectItem>
+                                                        <SelectItem value="admin">Admin</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon-sm"
+                                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                    onClick={() => handleDelete(u.uid, u.email || 'this user')}
+                                                    disabled={u.uid === currentUser?.uid}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </div>
                                     ))
                                 )}

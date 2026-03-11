@@ -79,3 +79,34 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ error: 'Failed to delete user', details: error.message }, { status: 500 });
     }
 }
+/**
+ * PATCH /api/users - Update a user's role (Admin only)
+ */
+export async function PATCH(request: Request) {
+    const { user, errorResponse } = await verifySession(request, true); // true = require admin
+    if (errorResponse) return errorResponse;
+
+    try {
+        const { uid, role } = (await request.json()) as {
+            uid: string;
+            role: 'admin' | 'member';
+        };
+
+        if (!uid || !role) {
+            return NextResponse.json({ error: 'uid and role are required' }, { status: 400 });
+        }
+
+        console.log(`👤 API: User ${user!.email} updating role for ${uid} to ${role}`);
+        
+        await adminDb.collection('users').doc(uid).update({
+            role,
+            updatedBy: user!.email,
+            updatedAt: FieldValue.serverTimestamp()
+        });
+
+        return NextResponse.json({ success: true }, { status: 200 });
+    } catch (error: any) {
+        console.error('Error updating user role:', error);
+        return NextResponse.json({ error: 'Failed to update user role', details: error.message }, { status: 500 });
+    }
+}

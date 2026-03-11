@@ -39,11 +39,12 @@ export const signInWithGoogle = async () => {
         }
 
         // Admin detection
-        const ADMIN_EMAIL = 'dale.crowley@somatone.com';
-        const role = (user.email?.toLowerCase() === ADMIN_EMAIL) ? 'admin' : 'member';
+        const INITIAL_ADMINS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || 'dale.crowley@somatone.com').split(',').map(e => e.trim().toLowerCase());
+        const isInitialAdmin = user.email ? INITIAL_ADMINS.includes(user.email.toLowerCase()) : false;
 
-        // Create or update user document in Firestore with role detection
-        await createOrUpdateUser(user, role);
+        // Create or update user document in Firestore
+        // We only pass a role if it's a forced 'admin' role for an initial admin
+        await createOrUpdateUser(user, isInitialAdmin ? 'admin' : undefined);
         return user;
     } catch (error: any) {
         console.error('Error signing in with Google popup:', error);
@@ -75,7 +76,7 @@ export const signOut = async () => {
 /**
  * Create or update user document in Firestore
  */
-const createOrUpdateUser = async (user: User, explicitRole?: 'admin' | 'member') => {
+const createOrUpdateUser = async (user: User, fixedRole?: 'admin' | 'member') => {
     const userRef = doc(db, 'users', user.uid);
     const userSnap = await getDoc(userRef);
 
@@ -86,7 +87,7 @@ const createOrUpdateUser = async (user: User, explicitRole?: 'admin' | 'member')
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
-            role: explicitRole || 'member', // Use explicit role if provided, else default to member
+            role: fixedRole || 'member', // Use fixed role if provided, else default to member
             createdAt: serverTimestamp(),
             lastLogin: serverTimestamp(),
         });
@@ -95,9 +96,13 @@ const createOrUpdateUser = async (user: User, explicitRole?: 'admin' | 'member')
         const updateData: any = {
             lastLogin: serverTimestamp(),
         };
-        if (explicitRole) {
-            updateData.role = explicitRole;
+        
+        // If a fixed role is provided (e.g. from INITIAL_ADMINS), enforce it
+        // Otherwise, keep the existing role in the document
+        if (fixedRole === 'admin') {
+            updateData.role = 'admin';
         }
+        
         await setDoc(userRef, updateData, { merge: true });
     }
 };

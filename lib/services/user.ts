@@ -3,7 +3,9 @@ import {
     getDocs,
     onSnapshot,
     query,
-    orderBy
+    orderBy,
+    doc,
+    setDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { UserProfile } from '@/types';
@@ -51,3 +53,4 @@ export const getUsers = async (): Promise<UserProfile[]> => {
         return [];
     }
 };
+

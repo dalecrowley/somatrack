@@ -20,8 +20,14 @@ service cloud.firestore {
     // Users collection
     match /users/{userId} {
       allow read: if isSomatoneUser();
-      // Allow users to write their own profile
-      allow write: if isSomatoneUser() && request.auth.uid == userId;
+      
+      // Allow admins to manage all users (including role updates)
+      // Allow users to update their own profile, but NOT change their role to admin
+      allow write: if isAdmin() || (
+        isSomatoneUser() && 
+        request.auth.uid == userId && 
+        (request.resource.data.role == resource.data.role || request.resource.data.role != 'admin')
+      );
     }
 
     // Clients collection
