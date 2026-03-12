@@ -15,6 +15,12 @@ export async function initializeSheets() {
         if (envServiceAccount) {
             try {
                 credentials = JSON.parse(envServiceAccount);
+                
+                // Fix for private key newline issues in environment variables
+                if (credentials.private_key && typeof credentials.private_key === 'string') {
+                    credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+                }
+                
                 console.log('✅ Google Sheets service account from GOOGLE_SHEETS_SERVICE_ACCOUNT env var');
             } catch (e) {
                 console.error('❌ Failed to parse GOOGLE_SHEETS_SERVICE_ACCOUNT env var:', e);
