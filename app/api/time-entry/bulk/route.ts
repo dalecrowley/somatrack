@@ -30,15 +30,26 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Forbidden: You can only log time for your own account' }, { status: 403 });
         }
 
-        const sheetConfig = employeeSheets[userEmail];
-        if (!sheetConfig) {
+        // Look up spreadsheet ID
+        let spreadsheetId = user!.spreadsheetId;
+        let sheetName = '2026';
+
+        if (!spreadsheetId) {
+            const sheetConfig = employeeSheets[userEmail];
+            if (sheetConfig) {
+                spreadsheetId = sheetConfig.spreadsheetId;
+                sheetName = sheetConfig.sheetName;
+            }
+        }
+
+        if (!spreadsheetId) {
             return NextResponse.json({
                 error: `No spreadsheet configured for email: ${userEmail}.`
             }, { status: 404 });
         }
 
         // Get spreadsheet column map once
-        const details = await getSpreadsheetDetails(sheetConfig.spreadsheetId);
+        const details = await getSpreadsheetDetails(spreadsheetId);
 
         const columnMapping: Record<string, string> = {};
         details.projects.forEach((p) => {
@@ -66,8 +77,8 @@ export async function POST(request: Request) {
 
             try {
                 const result = await updateTimeEntry(
-                    sheetConfig.spreadsheetId,
-                    details.sheetName || sheetConfig.sheetName,
+                    spreadsheetId,
+                    details.sheetName || sheetName,
                     date,
                     validEntries,
                     columnMapping
@@ -86,7 +97,7 @@ export async function POST(request: Request) {
             success: true,
             updatedCount: totalUpdated,
             errors: errors.length > 0 ? errors : undefined,
-            spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${sheetConfig.spreadsheetId}`,
+            spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`,
         });
 
     } catch (error: any) {

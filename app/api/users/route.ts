@@ -29,10 +29,11 @@ export async function POST(request: Request) {
     if (errorResponse) return errorResponse;
 
         try {
-            const { email, displayName, role = 'member' } = (await request.json()) as {
+            const { email, displayName, role = 'member', spreadsheetId } = (await request.json()) as {
                 email: string;
                 displayName?: string;
                 role?: 'admin' | 'member';
+                spreadsheetId?: string;
             };
             if (!email) {
                 return NextResponse.json({ error: 'Email is required' }, { status: 400 });
@@ -44,13 +45,16 @@ export async function POST(request: Request) {
             const existingQuery = await adminDb.collection('users').where('email', '==', normalizedEmail).get();
             
             if (!existingQuery.empty) {
-                console.log(`👤 API: User with email ${normalizedEmail} already exists. Updating role instead.`);
+                console.log(`👤 API: User with email ${normalizedEmail} already exists. Updating details instead.`);
                 const existingDoc = existingQuery.docs[0];
-                await existingDoc.ref.update({
+                const updateData: any = {
                     role,
                     updatedBy: user!.email,
                     updatedAt: FieldValue.serverTimestamp()
-                });
+                };
+                if (spreadsheetId !== undefined) updateData.spreadsheetId = spreadsheetId;
+
+                await existingDoc.ref.update(updateData);
                 return NextResponse.json({ uid: existingDoc.id, updated: true }, { status: 200 });
             }
 
@@ -61,6 +65,7 @@ export async function POST(request: Request) {
                 displayName: displayName ?? null,
                 photoURL: null,
                 role,
+                spreadsheetId: spreadsheetId || null,
                 createdAt: FieldValue.serverTimestamp(),
                 lastLogin: null,
                 invitedBy: user!.email
@@ -96,29 +101,34 @@ export async function DELETE(request: Request) {
     }
 }
 /**
- * PATCH /api/users - Update a user's role (Admin only)
+ * PATCH /api/users - Update a user's role/details (Admin only)
  */
 export async function PATCH(request: Request) {
     const { user, errorResponse } = await verifySession(request, true); // true = require admin
     if (errorResponse) return errorResponse;
 
     try {
-        const { uid, role } = (await request.json()) as {
+        const { uid, role, spreadsheetId } = (await request.json()) as {
             uid: string;
-            role: 'admin' | 'member';
+            role?: 'admin' | 'member';
+            spreadsheetId?: string;
         };
 
-        if (!uid || !role) {
-            return NextResponse.json({ error: 'uid and role are required' }, { status: 400 });
+        if (!uid) {
+            return NextResponse.json({ error: 'uid is required' }, { status: 400 });
         }
 
-        console.log(`👤 API: User ${user!.email} updating role for ${uid} to ${role}`);
+        console.log(`👤 API: User ${user!.email} updating details for ${uid}`);
         
-        await adminDb.collection('users').doc(uid).update({
-            role,
+        const updateData: any = {
             updatedBy: user!.email,
             updatedAt: FieldValue.serverTimestamp()
-        });
+        };
+        
+        if (role) updateData.role = role;
+        if (spreadsheetId !== undefined) updateData.spreadsheetId = spreadsheetId;
+
+        await adminDb.collection('users').doc(uid).update(updateData);
 
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (error: any) {

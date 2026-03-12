@@ -4,6 +4,7 @@ export interface UserProfile {
     displayName: string | null;
     photoURL: string | null;
     role: 'admin' | 'member';
+    spreadsheetId?: string;
     createdAt: any; // Firestore Timestamp
     lastLogin: any; // Firestore Timestamp
 }

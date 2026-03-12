@@ -23,6 +23,7 @@ export const UserManagement = () => {
     const [email, setEmail] = useState('');
     const [displayName, setDisplayName] = useState('');
     const [role, setRole] = useState<'admin' | 'member'>('member');
+    const [spreadsheetId, setSpreadsheetId] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
@@ -52,7 +53,7 @@ export const UserManagement = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ email, displayName, role }),
+                body: JSON.stringify({ email, displayName, role, spreadsheetId }),
             });
 
             const data = await res.json();
@@ -66,6 +67,7 @@ export const UserManagement = () => {
             setSuccess(data.updated ? `Role updated for existing user ${email}` : `Invitation created for ${email}`);
             setEmail('');
             setDisplayName('');
+            setSpreadsheetId('');
             setRole('member');
         } catch (err: any) {
             console.error('❌ Invite caught error:', err);
@@ -75,7 +77,7 @@ export const UserManagement = () => {
         }
     };
 
-    const handleRoleUpdate = async (uid: string, newRole: 'admin' | 'member') => {
+    const handleUserUpdate = async (uid: string, updates: Partial<UserProfile>) => {
         setError(null);
         setSuccess(null);
         try {
@@ -90,16 +92,16 @@ export const UserManagement = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ uid, role: newRole }),
+                body: JSON.stringify({ uid, ...updates }),
             });
 
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Failed to update role');
+            if (!res.ok) throw new Error(data.error || 'Failed to update user');
 
-            setSuccess('User role updated successfully');
+            setSuccess('User updated successfully');
         } catch (err: any) {
-            console.error('❌ Role update failed:', err);
-            setError(err.message || 'Failed to update role');
+            console.error('❌ User update failed:', err);
+            setError(err.message || 'Failed to update user');
         }
     };
 
@@ -184,6 +186,15 @@ export const UserManagement = () => {
                                     </SelectContent>
                                 </Select>
                             </div>
+                            <div className="grid gap-2 flex-1 w-full">
+                                <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Spreadsheet ID</label>
+                                <Input
+                                    type="text"
+                                    placeholder="1A2B3C..."
+                                    value={spreadsheetId}
+                                    onChange={(e) => setSpreadsheetId(e.target.value)}
+                                />
+                            </div>
                             <Button type="submit" disabled={isSubmitting} className="w-full md:w-auto">
                                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />}
                                 Invite
@@ -220,41 +231,60 @@ export const UserManagement = () => {
                                     </div>
                                 ) : (
                                     users.map((u: UserProfile) => (
-                                        <div key={u.uid} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <div key={u.uid} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4 hover:bg-muted/30 transition-colors">
+                                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                <div className="h-10 w-10 flex-shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
                                                     <UserIcon className="h-5 w-5 text-primary" />
                                                 </div>
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium">{u.displayName || 'Unnamed User'}</span>
-                                                    <span className="text-xs text-muted-foreground">{u.email || 'No email'}</span>
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="font-medium truncate">{u.displayName || 'Unnamed User'}</span>
+                                                    <span className="text-xs text-muted-foreground truncate">{u.email || 'No email'}</span>
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-2">
-                                                <Select 
-                                                    value={u.role} 
-                                                    onValueChange={(v: 'admin' | 'member') => handleRoleUpdate(u.uid, v)}
-                                                    disabled={u.uid === currentUser?.uid}
-                                                >
-                                                    <SelectTrigger className="w-32 h-8 text-xs">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="member">Member</SelectItem>
-                                                        <SelectItem value="admin">Admin</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                            <div className="flex flex-col md:flex-row items-start md:items-center gap-3 flex-shrink-0">
+                                                <div className="flex flex-col gap-1 w-full md:w-48">
+                                                    <label className="text-[10px] font-bold uppercase text-muted-foreground/60 px-1">Spreadsheet ID</label>
+                                                    <Input
+                                                        defaultValue={u.spreadsheetId || ''}
+                                                        placeholder="Google Sheet ID"
+                                                        className="h-8 text-xs bg-background/50"
+                                                        onBlur={(e) => {
+                                                            if (e.target.value !== (u.spreadsheetId || '')) {
+                                                                handleUserUpdate(u.uid, { spreadsheetId: e.target.value });
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
 
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon-sm"
-                                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                                    onClick={() => handleDelete(u.uid, u.email || 'this user')}
-                                                    disabled={u.uid === currentUser?.uid}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <div className="flex items-center gap-2 w-full md:w-auto">
+                                                    <div className="flex flex-col gap-1 w-full md:w-32">
+                                                        <label className="text-[10px] font-bold uppercase text-muted-foreground/60 px-1">Role</label>
+                                                        <Select 
+                                                            value={u.role} 
+                                                            onValueChange={(v: 'admin' | 'member') => handleUserUpdate(u.uid, { role: v })}
+                                                            disabled={u.uid === currentUser?.uid}
+                                                        >
+                                                            <SelectTrigger className="w-full md:w-32 h-8 text-xs">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="member">Member</SelectItem>
+                                                                <SelectItem value="admin">Admin</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 mt-5"
+                                                        onClick={() => handleDelete(u.uid, u.email || 'this user')}
+                                                        disabled={u.uid === currentUser?.uid}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </div>
                                     ))

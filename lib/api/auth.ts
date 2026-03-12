@@ -7,6 +7,7 @@ export interface AuthenticatedUser {
     uid: string;
     email: string;
     role: 'admin' | 'member';
+    spreadsheetId?: string;
 }
 
 /**
@@ -52,6 +53,7 @@ export async function verifySession(request: Request, requireAdmin = false): Pro
         const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
         const userData = userDoc.data();
         const role = userData?.role || 'member';
+        const spreadsheetId = userData?.spreadsheetId;
 
         // 4. Role check if required
         if (requireAdmin && role !== 'admin') {
@@ -66,7 +68,8 @@ export async function verifySession(request: Request, requireAdmin = false): Pro
             user: {
                 uid: decodedToken.uid,
                 email: email!,
-                role
+                role,
+                spreadsheetId
             },
             errorResponse: null
         };

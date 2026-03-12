@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/lib/store/useAuthStore';
+import { useAuth } from '@/hooks/useAuth';
 import { getIdToken } from '@/lib/firebase/auth';
 import {
     Dialog,
@@ -88,7 +89,7 @@ interface ProjectEntry {
 }
 
 export default function MagicBoxDialog({ open, onOpenChange }: MagicBoxDialogProps) {
-    const user = useAuthStore((state) => state.user);
+    const { user, userData } = useAuth();
 
     // === Magic Box state ===
     const [inputText, setInputText] = useState('');
@@ -110,10 +111,18 @@ export default function MagicBoxDialog({ open, onOpenChange }: MagicBoxDialogPro
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const userEmail = user?.email ?? '';
-    const sheetConfig = userEmail ? employeeSheets[userEmail] : null;
-    const spreadsheetUrl = sheetConfig
-        ? `https://docs.google.com/spreadsheets/d/${sheetConfig.spreadsheetId}`
+    
+    // Prioritize Firestore spreadsheetId, fallback to hardcoded config
+    const dynamicSpreadsheetId = userData?.spreadsheetId;
+    const legacySheetConfig = userEmail ? employeeSheets[userEmail] : null;
+
+    const spreadsheetId = dynamicSpreadsheetId || legacySheetConfig?.spreadsheetId;
+    const sheetDisplayName = legacySheetConfig?.name || userData?.displayName || 'User';
+
+    const spreadsheetUrl = spreadsheetId
+        ? `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
         : null;
+
 
     // Live parse preview as user types
     useEffect(() => {
@@ -238,7 +247,7 @@ export default function MagicBoxDialog({ open, onOpenChange }: MagicBoxDialogPro
 
     // === Grid Submit (bulk) ===
     const handleGridSync = async () => {
-        if (!userEmail || !sheetConfig) return;
+        if (!userEmail || !spreadsheetId) return;
 
         const filledEntries = projectEntries.filter((e) => e.hours.trim() !== '' && parseFloat(e.hours) > 0);
         if (filledEntries.length === 0) {
@@ -318,8 +327,8 @@ export default function MagicBoxDialog({ open, onOpenChange }: MagicBoxDialogPro
                             <div>
                                 <h2 className="tt-title">Time Tracker</h2>
                                 <p className="tt-subtitle">
-                                    {sheetConfig
-                                        ? `${sheetConfig.name} · 2026 Time Tracking`
+                                    {spreadsheetId
+                                        ? `${sheetDisplayName} · 2026 Time Tracking`
                                         : 'No sheet configured for your account.'}
                                 </p>
                             </div>
@@ -373,7 +382,7 @@ export default function MagicBoxDialog({ open, onOpenChange }: MagicBoxDialogPro
                             />
                             <button
                                 className="tt-magic-send"
-                                disabled={isSubmitting || !inputText.trim() || !sheetConfig}
+                                disabled={isSubmitting || !inputText.trim() || !spreadsheetId}
                                 onClick={handleMagicSubmit}
                                 title="Sync to Sheets"
                             >
@@ -487,7 +496,7 @@ export default function MagicBoxDialog({ open, onOpenChange }: MagicBoxDialogPro
                     <button
                         className="tt-sync-btn"
                         onClick={handleGridSync}
-                        disabled={isGridSyncing || !sheetConfig}
+                        disabled={isGridSyncing || !spreadsheetId}
                     >
                         {isGridSyncing ? (
                             <Loader2 size={16} className="animate-spin" />

@@ -13,6 +13,7 @@ export interface UserData {
     displayName: string | null;
     photoURL: string | null;
     role: 'admin' | 'member';
+    spreadsheetId?: string;
 }
 
 /**
@@ -41,9 +42,11 @@ export const useAuth = () => {
                     displayName: user.displayName,
                     photoURL: user.photoURL,
                     role: data.role || 'member',
+                    spreadsheetId: data.spreadsheetId,
                 });
             }
         }, (error) => {
+
             console.error('Firestore snapshot error:', error);
         });
 

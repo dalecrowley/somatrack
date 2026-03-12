@@ -22,8 +22,19 @@ export async function POST(request: Request) {
         }
 
         // 1. Look up user's spreadsheet configuration
-        const sheetConfig = employeeSheets[userEmail];
-        if (!sheetConfig) {
+        // Prioritize the spreadsheetId from the user's Firestore document
+        let spreadsheetId = user!.spreadsheetId;
+        let sheetName = '2026'; // Default sheet name
+
+        if (!spreadsheetId) {
+            const sheetConfig = employeeSheets[userEmail];
+            if (sheetConfig) {
+                spreadsheetId = sheetConfig.spreadsheetId;
+                sheetName = sheetConfig.sheetName;
+            }
+        }
+
+        if (!spreadsheetId) {
             return NextResponse.json({
                 error: `No spreadsheet configured for email: ${userEmail}. Please contact an administrator.`
             }, { status: 404 });
@@ -37,7 +48,7 @@ export async function POST(request: Request) {
         }
 
         // 3. Get Spreadsheet Details to map columns
-        const details = await getSpreadsheetDetails(sheetConfig.spreadsheetId);
+        const details = await getSpreadsheetDetails(spreadsheetId);
 
         // Create a mapping of project name -> column
         const columnMapping: Record<string, string> = {};
@@ -77,8 +88,8 @@ export async function POST(request: Request) {
         // 4. Check for conflicts if we aren't explicitly ignoring them
         if (!ignoreConflicts) {
             const conflictData = await checkConflicts(
-                sheetConfig.spreadsheetId,
-                details.sheetName || sheetConfig.sheetName,
+                spreadsheetId,
+                details.sheetName || sheetName,
                 dateStr,
                 validEntries,
                 columnMapping
@@ -96,8 +107,8 @@ export async function POST(request: Request) {
 
         // 5. Update the sheet
         const result = await updateTimeEntry(
-            sheetConfig.spreadsheetId,
-            details.sheetName || sheetConfig.sheetName,
+            spreadsheetId,
+            details.sheetName || sheetName,
             dateStr,
             validEntries,
             columnMapping
@@ -108,7 +119,7 @@ export async function POST(request: Request) {
             updatedCount: result.updatedCount,
             entries: validEntries,
             date: dateStr,
-            spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${sheetConfig.spreadsheetId}`
+            spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
         });
 
     } catch (error: any) {
