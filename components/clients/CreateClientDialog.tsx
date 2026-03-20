@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useClients } from '@/hooks/useClients';
 import { getIdToken } from '@/lib/firebase/auth';
@@ -17,10 +17,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus } from 'lucide-react';
-
-import { useRef } from 'react';
-import { ImagePlus, X, Loader2 } from 'lucide-react';
+import { ImagePlus, X, Loader2, Plus } from 'lucide-react';
+import { BoxImage } from '@/components/ui/BoxImage';
 
 export function CreateClientDialog() {
     const { user } = useAuth();
@@ -151,7 +149,7 @@ export function CreateClientDialog() {
                                     aria-label="Upload client logo"
                                 >
                                     {logoPreview ? (
-                                        <img
+                                        <BoxImage
                                             src={logoPreview}
                                             alt="Logo preview"
                                             className={`h-full w-full object-contain p-2 ${useDarkBackground ? '' : ''}`}

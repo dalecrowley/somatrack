@@ -5,7 +5,7 @@ import { Play, Pause, FileText, ImageIcon, Music, Video, ExternalLink, Trash2 } 
 import { Attachment } from '@/types';
 import { NodeViewWrapper } from '@tiptap/react';
 import { cn } from '@/lib/utils';
-import { getIdToken } from '@/lib/firebase/auth';
+import { useBoxUrl } from '@/hooks/useBoxUrl';
 
 interface MediaPreviewProps {
     attachment?: Attachment;
@@ -20,11 +20,6 @@ export function MediaPreview({ attachment: propAttachment, node, updateAttribute
     const waveformRef = useRef<HTMLDivElement>(null);
     const wavesurfer = useRef<WaveSurfer | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [authToken, setAuthToken] = useState<string | null>(null);
-
-    useEffect(() => {
-        getIdToken().then(setAuthToken);
-    }, []);
 
     // Resizing state
     const [isResizing, setIsResizing] = useState(false);
@@ -36,12 +31,31 @@ export function MediaPreview({ attachment: propAttachment, node, updateAttribute
     const attachment = propAttachment || (node?.attrs as Attachment);
     const width = node?.attrs?.width || '100%';
 
+    // Resolve URLs with useBoxUrl hook
+    const baseDisplayUrl = (attachment?.type === 'image' || attachment?.type === 'video') && attachment?.boxFileId
+        ? `/api/box/content/${attachment.boxFileId}`
+        : attachment?.boxFileId
+            ? `/api/box/thumbnail/${attachment.boxFileId}`
+            : (attachment?.boxSharedLink || attachment?.url || '');
+
+    const basePosterUrl = attachment?.boxFileId && attachment?.type === 'video'
+        ? `/api/box/thumbnail/${attachment.boxFileId}`
+        : '';
+
+    const resolvedDisplayUrl = useBoxUrl(baseDisplayUrl);
+    const resolvedPosterUrl = useBoxUrl(basePosterUrl);
+
     useEffect(() => {
         if (!attachment) return;
-        if (attachment.type === 'audio' && waveformRef.current) {
+        if (attachment.type === 'audio' && waveformRef.current && resolvedDisplayUrl) {
             const audioUrl = attachment.boxFileId
                 ? `/api/box/content/${attachment.boxFileId}`
                 : (attachment.boxSharedLink || attachment.url);
+
+            // Note: WaveSurfer might need the token too if it's the proxy URL
+            // Since we don't have a specific resolved URL for audio yet in the logic above
+            // let's ensure we use a resolved one.
+            const finalAudioUrl = resolvedDisplayUrl; // reuse display URL logic for audio
 
             wavesurfer.current = WaveSurfer.create({
                 container: waveformRef.current,
@@ -51,7 +65,7 @@ export function MediaPreview({ attachment: propAttachment, node, updateAttribute
                 barWidth: 2,
                 barRadius: 3,
                 height: 40,
-                url: audioUrl,
+                url: finalAudioUrl,
             });
 
             wavesurfer.current.on('play', () => setIsPlaying(true));
@@ -62,7 +76,7 @@ export function MediaPreview({ attachment: propAttachment, node, updateAttribute
                 wavesurfer.current?.destroy();
             };
         }
-    }, [attachment?.boxFileId, attachment?.boxSharedLink, attachment?.url, attachment?.type]);
+    }, [attachment?.boxFileId, attachment?.boxSharedLink, attachment?.url, attachment?.type, resolvedDisplayUrl]);
 
     const togglePlay = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -113,18 +127,6 @@ export function MediaPreview({ attachment: propAttachment, node, updateAttribute
         const isInteractive = attachment.type === 'image' || attachment.type === 'video';
 
         if (attachment.type === 'image' || attachment.type === 'document' || attachment.type === 'video') {
-            const tokenParam = authToken ? `?token=${authToken}` : '';
-
-            const displayUrl = (attachment.type === 'image' || attachment.type === 'video') && attachment.boxFileId
-                ? `/api/box/content/${attachment.boxFileId}${tokenParam}`
-                : attachment.boxFileId
-                    ? `/api/box/thumbnail/${attachment.boxFileId}${tokenParam}`
-                    : (attachment.boxSharedLink || attachment.url);
-
-            const posterUrl = attachment.boxFileId && attachment.type === 'video'
-                ? `/api/box/thumbnail/${attachment.boxFileId}${tokenParam}`
-                : '';
-
             return (
                 <div
                     ref={containerRef}
@@ -140,18 +142,18 @@ export function MediaPreview({ attachment: propAttachment, node, updateAttribute
                     {/* Media content */}
                     {attachment.type === 'video' ? (
                         <video
-                            src={displayUrl}
+                            src={resolvedDisplayUrl || undefined}
                             controls={!isResizing}
                             className={cn(
                                 "w-full h-auto rounded-md object-contain",
                                 (selected || isResizing) ? "max-h-[60vh]" : "max-h-[20vh]"
                             )}
-                            poster={posterUrl}
+                            poster={resolvedPosterUrl || undefined}
                         />
                     ) : (
                         <img
                             ref={imageRef}
-                            src={displayUrl}
+                            src={resolvedDisplayUrl || undefined}
                             alt={attachment.name}
                             className={cn(
                                 "w-full h-auto rounded-md object-contain pointer-events-none",

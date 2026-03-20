@@ -32,8 +32,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { EditClientDialog } from './EditClientDialog';
 import { getColorFromId } from '@/lib/utils/colors';
-import { getIdToken } from '@/lib/firebase/auth';
-import { useEffect, useState } from 'react';
+import { BoxImage } from '@/components/ui/BoxImage';
+import { useState } from 'react';
 
 interface ClientListProps {
     clients: Client[];
@@ -44,11 +44,6 @@ export function ClientList({ clients, isLoading }: ClientListProps) {
     const { removeClient, archiveClient } = useClients();
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
-    const [authToken, setAuthToken] = useState<string | null>(null);
-
-    useEffect(() => {
-        getIdToken().then(setAuthToken);
-    }, []);
 
     const handleDelete = async () => {
         if (deleteId) {
@@ -147,8 +142,8 @@ export function ClientList({ clients, isLoading }: ClientListProps) {
                                 {client.logoUrl ? (
                                     <div className={`h-20 w-full rounded-xl border border-muted-foreground/10 flex items-center justify-center transition-colors ${client.logoUseDarkBackground ? 'bg-zinc-900 border-zinc-800' : 'bg-white/50'
                                         }`}>
-                                        <img
-                                            src={client.logoUrl.includes('/api/box/') && authToken ? `${client.logoUrl}?token=${authToken}` : client.logoUrl}
+                                        <BoxImage
+                                            src={client.logoUrl}
                                             alt={`${client.name} logo`}
                                             className="h-12 w-auto max-w-[85%] object-contain"
                                         />

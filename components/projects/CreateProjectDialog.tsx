@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label';
 import { useRef } from 'react';
 import { ImagePlus, X, Loader2, Plus } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { BoxImage } from '@/components/ui/BoxImage';
 
 interface CreateProjectDialogProps {
     clientId: string;
@@ -163,7 +164,7 @@ export function CreateProjectDialog({ clientId }: CreateProjectDialogProps) {
                                     aria-label="Upload project logo"
                                 >
                                     {logoPreview ? (
-                                        <img
+                                        <BoxImage
                                             src={logoPreview}
                                             alt="Logo preview"
                                             className="h-full w-full object-contain p-2"

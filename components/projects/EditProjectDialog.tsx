@@ -20,6 +20,7 @@ import { DescriptionEditor, DescriptionEditorHandle } from '@/components/ui/desc
 import { Checkbox } from '@/components/ui/checkbox';
 import { useRef } from 'react';
 import { ImagePlus, X, Loader2 } from 'lucide-react';
+import { BoxImage } from '@/components/ui/BoxImage';
 
 interface EditProjectDialogProps {
     project: Project | null;
@@ -38,7 +39,6 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [useDarkBackground, setUseDarkBackground] = useState(false);
     const [clientName, setClientName] = useState<string>('');
-    const [authToken, setAuthToken] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -60,7 +60,6 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
             // Sync editor content manually
             descriptionEditorRef.current?.setContent(project.description || '');
         }
-        getIdToken().then(setAuthToken);
     }, [project, open, clientId]);
 
     const descriptionEditorRef = useRef<DescriptionEditorHandle>(null);
@@ -192,8 +191,8 @@ export function EditProjectDialog({ project, open, onOpenChange, clientId }: Edi
                                     aria-label="Upload project logo"
                                 >
                                     {logoPreview ? (
-                                        <img
-                                            src={logoPreview.includes('/api/box/') && authToken ? `${logoPreview}?token=${authToken}` : logoPreview}
+                                        <BoxImage
+                                            src={logoPreview}
                                             alt="Logo preview"
                                             className="h-full w-full object-contain p-2"
                                         />

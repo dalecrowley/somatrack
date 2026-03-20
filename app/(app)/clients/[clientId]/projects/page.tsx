@@ -10,14 +10,13 @@ import { ArchivedProjectsDialog } from '@/components/projects/ArchivedProjectsDi
 import { CreateProjectDialog } from '@/components/projects/CreateProjectDialog';
 import { getClient } from '@/lib/services/client'; // Server-side function, but usable in client components
 import { Client } from '@/types';
-import { getIdToken } from '@/lib/firebase/auth';
+import { BoxImage } from '@/components/ui/BoxImage';
 
 export default function ProjectsPage() {
     const params = useParams();
     const clientId = params.clientId as string;
     const { projects, loading: projectsLoading } = useProjects(clientId);
     const [client, setClient] = useState<Client | null>(null);
-    const [authToken, setAuthToken] = useState<string | null>(null);
 
     // Fetch client details for the header
     useEffect(() => {
@@ -28,7 +27,6 @@ export default function ProjectsPage() {
             }
         };
         fetchClient();
-        getIdToken().then(setAuthToken);
     }, [clientId]);
 
     return (
@@ -48,8 +46,8 @@ export default function ProjectsPage() {
                     {client?.logoUrl && (
                         <div className={`h-16 w-fit px-6 py-2 rounded-xl border border-muted-foreground/10 flex items-center justify-center transition-colors ${client.logoUseDarkBackground ? 'bg-zinc-900 border-zinc-800' : 'bg-white/50'
                             }`}>
-                            <img
-                                src={client.logoUrl.includes('/api/box/') && authToken ? `${client.logoUrl}?token=${authToken}` : client.logoUrl}
+                            <BoxImage
+                                src={client.logoUrl}
                                 alt={`${client.name} logo`}
                                 className="h-full w-auto object-contain max-h-[85%] max-w-[90%]"
                             />

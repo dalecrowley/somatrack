@@ -4,7 +4,7 @@ import * as React from "react"
 import { Avatar as AvatarPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
-import { useBoxImage } from "@/hooks/useBoxImage"
+import { useBoxUrl } from "@/hooks/useBoxUrl"
 
 function Avatar({
   className,
@@ -31,12 +31,12 @@ function AvatarImage({
   src,
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Image>) {
-  const resolvedSrc = useBoxImage(src)
+  const resolvedSrc = useBoxUrl(src)
 
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
-      src={resolvedSrc}
+      src={resolvedSrc || undefined}
       className={cn("aspect-square size-full", className)}
       {...props}
     />

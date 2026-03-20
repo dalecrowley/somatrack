@@ -9,7 +9,6 @@ import { ProjectBoard } from '@/components/projects/ProjectBoard';
 import { ProjectSettingsDialog } from '@/components/projects/ProjectSettingsDialog';
 import { getClient } from '@/lib/services/client';
 import { Client } from '@/types';
-import { getIdToken } from '@/lib/firebase/auth';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -17,9 +16,9 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
 import { ProjectInfoDialog } from '@/components/projects/ProjectInfoDialog';
 import { ArchivedTicketsDialog } from '@/components/projects/ArchivedTicketsDialog';
+import { BoxImage } from '@/components/ui/BoxImage';
 
 export default function ProjectPage() {
     const params = useParams();
@@ -29,7 +28,6 @@ export default function ProjectPage() {
     const [client, setClient] = useState<Client | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [infoOpen, setInfoOpen] = useState(false);
-    const [authToken, setAuthToken] = useState<string | null>(null);
 
     // Fetch client details for the header
     useEffect(() => {
@@ -40,7 +38,6 @@ export default function ProjectPage() {
             }
         };
         fetchClient();
-        getIdToken().then(setAuthToken);
     }, [clientId]);
 
     if (projectLoading) {
@@ -71,8 +68,8 @@ export default function ProjectPage() {
                         <ChevronRight className="mx-2 h-4 w-4" />
                         <Link href={`/clients/${clientId}/projects`} className="hover:text-foreground transition-colors flex items-center gap-1.5">
                             {client?.logoUrl && (
-                                <img
-                                    src={client.logoUrl.includes('/api/box/') && authToken ? `${client.logoUrl}?token=${authToken}` : client.logoUrl}
+                                <BoxImage
+                                    src={client.logoUrl}
                                     alt=""
                                     className="h-3.5 w-3.5 object-contain"
                                 />
@@ -91,16 +88,8 @@ export default function ProjectPage() {
                         {(project.logoUrl || client?.logoUrl) && (
                             <div className={`h-12 w-fit px-4 py-2 rounded-lg border border-muted-foreground/10 flex items-center justify-center transition-colors ${(project.logoUrl ? project.logoUseDarkBackground : client?.logoUseDarkBackground) ? 'bg-zinc-900 border-zinc-800' : 'bg-white/50'
                                 }`}>
-                                <img
-                                    src={
-                                        (() => {
-                                            const url = project.logoUrl || client?.logoUrl;
-                                            if (url?.includes('/api/box/') && authToken) {
-                                                return `${url}?token=${authToken}`;
-                                            }
-                                            return url;
-                                        })()
-                                    }
+                                <BoxImage
+                                    src={project.logoUrl || client?.logoUrl}
                                     alt={`${project.logoUrl ? project.name : client?.name} logo`}
                                     className="h-full w-auto object-contain max-h-[90%] max-w-[95%]"
                                 />

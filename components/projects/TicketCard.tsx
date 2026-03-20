@@ -118,21 +118,19 @@ export function TicketCard({ ticket, index, projectName, clientName, color, stat
                                         )}
                                     </div>
                                     
-                                    <div className="flex -space-x-1.5">
-                                        {assignedUsers.length > 0 && assignedUsers.slice(0, 3).map((user: any, idx: number) => (
-                                            <img 
-                                                key={user.uid}
-                                                src={user.photoURL || undefined}
-                                                alt={user.displayName || user.email}
-                                                className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-800 shadow-sm object-cover"
-                                                style={{ zIndex: assignedUsers.length - idx }}
+                                    <div className="flex -space-x-1.5 focus:outline-none">
+                                        {assignedUsers.map((user: any, idx: number) => (
+                                            <Avatar 
+                                                key={user.uid} 
+                                                className="w-6 h-6 border-2 border-white dark:border-slate-800 shadow-sm"
                                                 title={user.displayName}
-                                                onError={(e) => {
-                                                    // Fallback to initial if image fails
-                                                    e.currentTarget.style.display = 'none';
-                                                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                                                }}
-                                            />
+                                                style={{ zIndex: assignedUsers.length - idx }}
+                                            >
+                                                <AvatarImage src={user.photoURL || undefined} className="object-cover" />
+                                                <AvatarFallback className="text-[8px] bg-slate-200">
+                                                    {user.displayName?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || '??'}
+                                                </AvatarFallback>
+                                            </Avatar>
                                         ))}
                                         {assignedUsers.length > 3 && (
                                             <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-800 bg-slate-200 flex items-center justify-center text-[9px] font-bold text-slate-600" style={{ zIndex: 0 }}>

@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useRef } from 'react';
 import { ImagePlus, X, Loader2 } from 'lucide-react';
+import { BoxImage } from '@/components/ui/BoxImage';
 
 interface EditClientDialogProps {
     client: Client | null;
@@ -33,7 +34,6 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [useDarkBackground, setUseDarkBackground] = useState(false);
-    const [authToken, setAuthToken] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -44,7 +44,6 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
             setLogoFile(null);
             setError(null);
         }
-        getIdToken().then(setAuthToken);
     }, [client, open]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -162,8 +161,8 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                                     aria-label="Upload client logo"
                                 >
                                     {logoPreview ? (
-                                        <img
-                                            src={logoPreview.includes('/api/box/') && authToken ? `${logoPreview}?token=${authToken}` : logoPreview}
+                                        <BoxImage
+                                            src={logoPreview}
                                             alt="Logo preview"
                                             className="h-full w-full object-contain p-2"
                                         />

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ExternalLink, Trash2, Plus, Paperclip, Upload, Loader2, Download } from 'lucide-react';
 import { MediaPreview } from './MediaPreview';
+import { useBoxUrl } from '@/hooks/useBoxUrl';
 import { getIdToken } from '@/lib/firebase/auth';
 
 interface TicketAttachmentsProps {
@@ -293,39 +294,10 @@ export const TicketAttachments = forwardRef<TicketAttachmentsHandle, TicketAttac
                         <div key={att.id} className="relative group">
                             <MediaPreview attachment={att} />
                             {!readOnly && (
-                                <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-background/80 backdrop-blur-sm rounded-md border shadow-sm p-1">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 text-muted-foreground hover:text-primary"
-                                        title="Open in Box"
-                                        onClick={() => window.open(att.boxSharedLink || att.url, '_blank')}
-                                    >
-                                        <ExternalLink className="h-3 w-3" />
-                                    </Button>
-                                    {att.boxFileId && (
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-muted-foreground hover:text-primary"
-                                            title="Download"
-                                            asChild
-                                        >
-                                            <a href={`/api/box/content/${att.boxFileId}`} download>
-                                                <Download className="h-3 w-3" />
-                                            </a>
-                                        </Button>
-                                    )}
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                        title="Delete"
-                                        onClick={() => handleRemove(att.id)}
-                                    >
-                                        <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                </div>
+                                <AttachmentActionButtons 
+                                    att={att} 
+                                    onRemove={() => handleRemove(att.id)} 
+                                />
                             )}
                         </div>
                     ))}
@@ -354,3 +326,43 @@ export const TicketAttachments = forwardRef<TicketAttachmentsHandle, TicketAttac
         );
     }
 );
+
+function AttachmentActionButtons({ att, onRemove }: { att: Attachment; onRemove: () => void }) {
+    const downloadUrl = useBoxUrl(att.boxFileId ? `/api/box/content/${att.boxFileId}` : '');
+
+    return (
+        <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-background/80 backdrop-blur-sm rounded-md border shadow-sm p-1">
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-primary"
+                title="Open in Box"
+                onClick={() => window.open(att.boxSharedLink || att.url, '_blank')}
+            >
+                <ExternalLink className="h-3 w-3" />
+            </Button>
+            {att.boxFileId && (
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-primary"
+                    title="Download"
+                    asChild
+                >
+                    <a href={downloadUrl} download>
+                        <Download className="h-3 w-3" />
+                    </a>
+                </Button>
+            )}
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                title="Delete"
+                onClick={onRemove}
+            >
+                <Trash2 className="h-3 w-3" />
+            </Button>
+        </div>
+    );
+}
