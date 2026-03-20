@@ -55,6 +55,15 @@ export interface Swimlane {
     color?: string; // Row header color
 }
 
+export interface TimeEntry {
+    id: string;
+    userId: string;
+    date: string; // ISO string
+    hours: number;
+    description: string;
+    createdAt: any;
+}
+
 export interface Ticket {
     id: string;
     title: string;
@@ -69,6 +78,7 @@ export interface Ticket {
     boxFolderId?: string;
     attachments?: Attachment[];
     comments?: Comment[];
+    timeEntries?: TimeEntry[];
     createdAt: any;
     createdBy: string;
     updatedAt: any;

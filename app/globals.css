@@ -44,6 +44,56 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+  
+  /* Digital Atrium Stitch Tokens */
+  --color-error: #e11d48;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-tint: #2563eb;
+  --color-secondary-fixed-dim: #adc6ff;
+  --color-on-error-container: #4c0519;
+  --color-on-primary-fixed: #eff6ff;
+  --color-outline: #75777d;
+  --color-surface: #f8fafc;
+  --color-primary-fixed: #dbeafe;
+  --color-tertiary-fixed-dim: #4edea3;
+  --color-on-surface-variant: #475569;
+  --color-surface-container: #f1f5f9;
+  --color-on-tertiary-container: #064e3b;
+  --color-inverse-surface: #1e293b;
+  --color-surface-bright: #ffffff;
+  --color-surface-container-high: #e2e8f0;
+  --color-on-secondary-container: #eff6ff;
+  --color-on-primary-fixed-variant: #1e40af;
+  --color-on-primary: #ffffff;
+  --color-tertiary-fixed: #d1fae5;
+  --color-tertiary: #064e3b;
+  --color-on-tertiary-fixed-variant: #065f46;
+  --color-surface-container-highest: #cbd5e1;
+  --color-tertiary-container: #064e3b;
+  --color-on-primary-container: #1d4ed8;
+  --color-inverse-on-surface: #f1f5f9;
+  --color-on-error: #ffffff;
+  --color-on-tertiary: #ffffff;
+  --color-primary-fixed-dim: #93c5fd;
+  --color-primary-container: #dbeafe;
+  --color-secondary-fixed: #dbeafe;
+  --color-error-container: #ffe4e6;
+  --color-surface-variant: #f1f5f9;
+  --color-inverse-primary: #93c5fd;
+  --color-surface-container-low: #f8fafc;
+  --color-on-secondary-fixed: #172554;
+  --color-on-surface: #0f172a;
+  --color-on-background: #0f172a;
+  --color-surface-dim: #e2e8f0;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #dbeafe;
+  --color-on-tertiary-fixed: #022c22;
+  --color-on-secondary-fixed-variant: #1d4ed8;
+  --color-outline-variant: #cbd5e1;
+  
+  --font-headline: 'Inter', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-label: 'Inter', sans-serif;
 }
 
 :root {

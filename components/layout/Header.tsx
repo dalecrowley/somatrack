@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 import { signOut } from '@/lib/firebase/auth';
@@ -14,22 +12,16 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Clock, ShieldCheck } from 'lucide-react';
 import MagicBoxDialog from '@/components/time-tracking/MagicBoxDialog';
-import { useIsAdmin } from '@/hooks/useAuth';
+import { ProfileDialog } from './ProfileDialog';
 
 export default function Header() {
     const user = useAuthStore((state) => state.user);
     const router = useRouter();
     const pathname = usePathname();
     const [magicBoxOpen, setMagicBoxOpen] = useState(false);
-    const isAdmin = useIsAdmin();
-
-    const isDashboard = pathname === '/dashboard';
-    // Using the black version for better visibility on white backgrounds
-    const logoSrc = '/Somatrackblack.png';
+    const [profileOpen, setProfileOpen] = useState(false);
 
     const handleSignOut = async () => {
         try {
@@ -50,86 +42,81 @@ export default function Header() {
             .slice(0, 2);
     };
 
+    if (!user) return null;
+
+    // Optional page-specific navigation
+    let topNavLinks = (
+        <nav className="hidden md:flex gap-6 h-full items-center ml-8 text-sm">
+            {/* Contextual links based on page can go here, using Atrium styling */}
+            {/* e.g., <a className="text-primary dark:text-white border-b-2 border-primary dark:border-slate-200 py-5">Board</a> */}
+        </nav>
+    );
+
     return (
         <>
-            <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="container flex h-14 items-center">
-                    <div className="mr-4 flex">
-                        <Link href="/dashboard" className="mr-6 flex items-center space-x-2">
-                            <img
-                                src={logoSrc}
-                                alt="SomaTrack"
-                                className="h-8 w-auto object-contain"
-                            />
-                        </Link>
-                        <nav className="flex items-center space-x-6 text-sm font-medium">
-                            <Link
-                                href="/dashboard"
-                                className="transition-colors hover:text-foreground/80 text-foreground/60"
-                            >
-                                Dashboard
-                            </Link>
-                            <Link
-                                href="/clients"
-                                className="transition-colors hover:text-foreground/80 text-foreground/60"
-                            >
-                                Clients
-                            </Link>
-                            {isAdmin && (
-                                <Link
-                                    href="/admin"
-                                    className="transition-colors hover:text-foreground/80 text-foreground/60 flex items-center gap-1"
-                                >
-                                    <ShieldCheck size={14} />
-                                    Admin
-                                </Link>
-                            )}
-                        </nav>
+            <header className="fixed top-0 right-0 left-64 h-16 z-30 bg-white/80 dark:bg-slate-950 backdrop-blur-md flex justify-between items-center px-8 border-b border-blue-100/50 font-['Inter'] font-medium">
+                <div className="flex items-center gap-8 h-full">
+                    {/* Search Bar - Placeholder */}
+                    <div className="relative group flex items-center">
+                        <span className="material-symbols-outlined absolute left-3 text-slate-400 pointer-events-none">search</span>
+                        <input 
+                            className="pl-10 pr-4 py-1.5 bg-slate-100/80 rounded-full border-none focus:ring-2 focus:ring-primary/20 w-64 text-sm transition-all text-slate-800" 
+                            placeholder="Search projects..." 
+                            type="text" 
+                        />
                     </div>
-                    <div className="flex flex-1 items-center justify-end space-x-3">
-                        {user && (
-                            <button
-                                id="log-time-btn"
-                                className="log-time-btn"
-                                onClick={() => setMagicBoxOpen(true)}
-                                title="Log time to Google Sheets"
-                            >
-                                <Clock size={14} />
-                                Log Time
+                    {topNavLinks}
+                </div>
+                
+                <div className="flex items-center gap-4">
+                    <button 
+                        className="px-4 py-1.5 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm flex items-center gap-2"
+                        onClick={() => setMagicBoxOpen(true)}
+                        title="Log time to Google Sheets"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">schedule</span>
+                        Log Time
+                    </button>
+                    
+                    <div className="flex items-center gap-2">
+                        <button className="flex items-center justify-center w-8 h-8 text-slate-500 hover:bg-blue-50 hover:text-primary rounded-lg transition-colors">
+                            <span className="material-symbols-outlined text-[20px]">notifications</span>
+                        </button>
+                    </div>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 border-2 border-primary/20 hover:border-primary/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20">
+                                <Avatar className="h-full w-full">
+                                    <AvatarImage src={user.photoURL || ''} alt={user.displayName || ''} />
+                                    <AvatarFallback className="text-xs bg-slate-200 text-slate-700">{getUserInitials()}</AvatarFallback>
+                                </Avatar>
                             </button>
-                        )}
-                        {user && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage src={user.photoURL || ''} alt={user.displayName || ''} />
-                                            <AvatarFallback>{getUserInitials()}</AvatarFallback>
-                                        </Avatar>
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="w-56" align="end" forceMount>
-                                    <DropdownMenuLabel className="font-normal">
-                                        <div className="flex flex-col space-y-1">
-                                            <p className="text-sm font-medium leading-none">{user.displayName}</p>
-                                            <p className="text-xs leading-none text-muted-foreground">
-                                                {user.email}
-                                            </p>
-                                        </div>
-                                    </DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={handleSignOut}>
-                                        Sign out
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        )}
-                    </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56" align="end" forceMount>
+                            <DropdownMenuLabel className="font-normal">
+                                <div className="flex flex-col space-y-1">
+                                    <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                                    <p className="text-xs leading-none text-muted-foreground">
+                                        {user.email}
+                                    </p>
+                                </div>
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => setProfileOpen(true)} className="cursor-pointer font-medium text-slate-700 dark:text-slate-300">
+                                Profile Settings
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={handleSignOut} className="text-error focus:text-error focus:bg-error-container/50 cursor-pointer">
+                                Sign out
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </header>
 
             <MagicBoxDialog open={magicBoxOpen} onOpenChange={setMagicBoxOpen} />
+            <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
         </>
     );
 }
-

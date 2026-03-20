@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
-import { Ticket, Attachment, Comment } from '@/types';
+import { Ticket, Attachment, Comment, TimeEntry } from '@/types';
 import { useTickets } from '@/hooks/useTickets';
 import { useProject } from '@/hooks/useProject';
 import { useUsers } from '@/hooks/useUsers';
@@ -16,15 +16,11 @@ import {
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-// import { Textarea } from '@/components/ui/textarea'; // No longer used
-import { TicketAttachments, TicketAttachmentsHandle } from './ticket/TicketAttachments';
 import { TicketComments } from './ticket/TicketComments';
-import { Trash2, X, User, MessageSquare, Paperclip, Check, Link2, Calendar, Archive, Upload } from 'lucide-react';
-import { Linkify } from '@/components/ui/linkify';
+import { TicketTimeTracking } from './ticket/TicketTimeTracking';
+import { Trash2, X, Check, Archive, Upload } from 'lucide-react';
 import { DescriptionEditor, DescriptionEditorHandle } from '@/components/ui/description-editor';
 import { TicketAssigneePicker } from './ticket/TicketAssigneePicker';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -64,7 +60,6 @@ export function EditTicketDialog({ ticket, projectId, projectName, clientName, o
     const [resolvedProjectName, setResolvedProjectName] = useState(projectName || '');
     const [resolvedClientName, setResolvedClientName] = useState(clientName || '');
 
-    // Resolve missing names independently for robustness
     useEffect(() => {
         if (project) {
             if (!resolvedProjectName) setResolvedProjectName(project.name);
@@ -77,39 +72,25 @@ export function EditTicketDialog({ ticket, projectId, projectName, clientName, o
         }
     }, [project, resolvedProjectName, resolvedClientName]);
 
-    console.log(`🖼️ [EditTicketDialog:${ticket.id}] State:`, { resolvedProjectName, resolvedClientName, projectId });
-
     const [title, setTitle] = useState(ticket.title);
     const [description, setDescription] = useState(ticket.description);
     const [dueDate, setDueDate] = useState<Date | undefined>(ticket.dueDate ? new Date(ticket.dueDate.seconds * 1000) : undefined);
     const [assigneeIds, setAssigneeIds] = useState<string[]>(ticket.assigneeIds || []);
-    const [attachments, setAttachments] = useState<Attachment[]>(ticket.attachments || []);
     const [comments, setComments] = useState<Comment[]>(ticket.comments || []);
+    const [timeEntries, setTimeEntries] = useState<TimeEntry[]>(ticket.timeEntries || []);
     const [currentStatusId, setCurrentStatusId] = useState(ticket.statusId);
     const [bannerColor, setBannerColor] = useState(initialColor);
-
-    // Track if status has changed (pending update)
     const [pendingStatusId, setPendingStatusId] = useState<string | null>(null);
 
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [isEditingDesc, setIsEditingDesc] = useState(false);
-    const [isDragging, setIsDragging] = useState(false); // New state for drag visual feedback
+    const [isDragging, setIsDragging] = useState(false);
 
-    // Temp states for editing
     const [tempTitle, setTempTitle] = useState(ticket.title);
     const [tempDesc, setTempDesc] = useState(ticket.description);
 
-    // Dropdown state for sidebar actions
     const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
-
-
-
-    // Hidden file input for sidebar "Files" button
     const descriptionEditorRef = useRef<DescriptionEditorHandle>(null);
-
-    // Legacy support: We might still have attachments in the DB, but we're moving to inline.
-    // We'll keep the attachments state for now but maybe not display the old list if we fully migrate.
-    // For this implementation, we will hide the old "TicketAttachments" component.
 
     useEffect(() => {
         if (open) {
@@ -118,28 +99,24 @@ export function EditTicketDialog({ ticket, projectId, projectName, clientName, o
             setTempTitle(ticket.title);
             setTempDesc(ticket.description);
             setAssigneeIds(ticket.assigneeIds || []);
-            setAttachments(ticket.attachments || []);
             setComments(ticket.comments || []);
+            setTimeEntries(ticket.timeEntries || []);
             setCurrentStatusId(ticket.statusId);
             setBannerColor(initialColor);
             setIsEditingTitle(false);
             setIsEditingDesc(false);
-            setPendingStatusId(null); // Reset pending status
+            setPendingStatusId(null);
 
-            // Auto-open description if it exists
             if (ticket.description && ticket.description.trim() !== "") {
                 setIsEditingDesc(true);
             }
 
-            // Sync editor content manually
             descriptionEditorRef.current?.setContent(ticket.description || '');
         }
     }, [open, ticket, initialColor]);
 
-    // Commit pending status change when dialog closes
     useEffect(() => {
         if (!open && pendingStatusId) {
-            // Dialog just closed and we have a pending status update
             editTicket(ticket.id, { statusId: pendingStatusId });
             setPendingStatusId(null);
         }
@@ -159,10 +136,9 @@ export function EditTicketDialog({ ticket, projectId, projectName, clientName, o
     };
 
     const handleStatusUpdate = (statusId: string, color?: string) => {
-        // Update UI immediately but don't save to DB yet
         setCurrentStatusId(statusId);
         if (color) setBannerColor(color);
-        setPendingStatusId(statusId); // Mark as pending
+        setPendingStatusId(statusId);
     };
 
     const handleDateSelect = async (date: Date | undefined) => {
@@ -188,7 +164,6 @@ export function EditTicketDialog({ ticket, projectId, projectName, clientName, o
         }
     };
 
-    // Drag and Drop Handlers
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -198,7 +173,6 @@ export function EditTicketDialog({ ticket, projectId, projectName, clientName, o
     const handleDragLeave = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        // Check if we're actually leaving the container, not just entering a child
         if (e.currentTarget.contains(e.relatedTarget as Node)) return;
         setIsDragging(false);
     };
@@ -210,10 +184,8 @@ export function EditTicketDialog({ ticket, projectId, projectName, clientName, o
 
         const files = Array.from(e.dataTransfer.files);
         if (files.length > 0) {
-            // Ensure we are in edit mode
             if (!isEditingDesc) setIsEditingDesc(true);
 
-            // We need to wait for the editor to mount if it wasn't already
             let attempts = 0;
             const tryUpload = () => {
                 if (descriptionEditorRef.current?.isReady) {
@@ -227,14 +199,8 @@ export function EditTicketDialog({ ticket, projectId, projectName, clientName, o
         }
     };
 
-    // Auto-save description with debounce REMOVED
-
     const statuses = project?.statuses || [];
     const statusLabel = statuses.find(s => s.id === currentStatusId)?.title?.toUpperCase() || currentStatusId?.toUpperCase().replace(/_/g, ' ') || 'TODO';
-    const assignedUsers = users.filter(u => assigneeIds.includes(u.uid));
-
-    // Find creator for the "Posted by" section
-    const creatorUser = users.find(u => u.uid === ticket.createdBy || u.email === ticket.createdBy);
 
     const [showUnsavedAlert, setShowUnsavedAlert] = useState(false);
     const hasUnsavedDescription = isEditingDesc && tempDesc !== description;
@@ -253,6 +219,9 @@ export function EditTicketDialog({ ticket, projectId, projectName, clientName, o
         }
     };
 
+    // User details logic
+    const displayedUsers = users.filter(u => assigneeIds.includes(u.uid));
+
     return (
         <>
             <Dialog open={open} onOpenChange={(newOpen) => {
@@ -263,7 +232,7 @@ export function EditTicketDialog({ ticket, projectId, projectName, clientName, o
                 onOpenChange(newOpen);
             }}>
                 <DialogContent
-                    className="md:max-w-[75vw] w-[95vw] h-[90vh] flex flex-col p-0 gap-0 overflow-hidden border-none shadow-2xl transition-all duration-300"
+                    className="md:max-w-[85vw] w-[95vw] h-[95vh] flex flex-col p-0 gap-0 overflow-hidden border-none shadow-2xl transition-all duration-300 bg-surface dark:bg-slate-900 font-['Inter']"
                     showCloseButton={false}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -289,166 +258,187 @@ export function EditTicketDialog({ ticket, projectId, projectName, clientName, o
                         <DialogTitle>Edit Ticket: {title}</DialogTitle>
                         <DialogDescription>View and edit ticket details, attachments, and discussion.</DialogDescription>
                     </VisuallyHidden>
-                    {/* Status Banner */}
-                    <div
-                        className="h-10 flex items-center justify-center relative transition-colors duration-500"
-                        style={{ backgroundColor: bannerColor || '#7FB3B3' }}
-                    >
-                        <span className="text-white text-xs font-bold tracking-[0.2em]">{statusLabel}</span>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-2 text-white/80 hover:text-white hover:bg-white/10 h-7 w-7"
-                            onClick={handleClose}
-                        >
-                            <X className="h-4 w-4" />
-                        </Button>
-                    </div>
 
-                    <div className="flex-1 overflow-y-auto bg-[#F9FAFB] dark:bg-background">
-                        <div className="flex flex-col md:flex-row h-full">
-                            {/* Main Content */}
-                            <div className="flex-1 p-10 pr-6 space-y-8">
-                                {/* Header / Title Section */}
-                                <div className="space-y-4">
-                                    {isEditingTitle ? (
-                                        <div className="space-y-3">
-                                            <Input
-                                                className="text-2xl font-bold h-auto py-1 px-2 border-primary/30 bg-white focus-visible:ring-2 focus-visible:ring-primary/20"
-                                                value={tempTitle}
-                                                onChange={(e) => setTempTitle(e.target.value)}
-                                                autoFocus
-                                                onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
-                                                onBlur={handleSaveTitle}
-                                            />
-                                        </div>
-                                    ) : (
-                                        <h2
-                                            className="text-2xl font-bold text-[#4A4A4A] dark:text-foreground cursor-pointer hover:bg-muted/30 px-1 py-0.5 rounded transition-colors"
-                                            onClick={() => setIsEditingTitle(true)}
-                                        >
-                                            {title}
-                                        </h2>
-                                    )}
+                    {/* Task View Header / Hero Section */}
+                    <div className="flex-1 overflow-y-auto">
+                        {/* Status banner alternative: Top strip or pill. Since this is Atrium, we remove the massive heavy color banner and put it inline */}
+                        <div className="flex justify-end p-4 absolute top-0 right-0 z-10 w-full pointer-events-none">
+                            <div className="flex gap-2 pointer-events-auto shadow-lg rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1">
+                                <button className="material-symbols-outlined p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors flex items-center justify-center">share</button>
+                                <button className="material-symbols-outlined p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors flex items-center justify-center">more_horiz</button>
+                                <button onClick={handleClose} className="material-symbols-outlined p-2 text-error hover:bg-error-container rounded-full transition-colors flex items-center justify-center">close</button>
+                            </div>
+                        </div>
 
-                                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                                        <span className="flex items-center gap-1 opacity-70">
-                                            Posted by <span className="font-semibold underline cursor-pointer">Dale Crowley</span> just now.
-                                        </span>
-                                        <span className="opacity-40">•</span>
-                                        <span>In swimlane <span className="font-semibold underline cursor-pointer">{ticket.swimlaneId}</span>, in list <span className="font-semibold underline cursor-pointer">{statusLabel}</span></span>
-                                        {assignedUsers.length > 0 && (
+                        <section className="px-12 pt-16 pb-8 flex flex-col gap-6">
+                            <div className="flex justify-between items-start">
+                                <div className="flex flex-col gap-2 relative w-full pr-32">
+                                    <div className="flex items-center gap-3 text-secondary dark:text-blue-400 font-semibold text-xs tracking-widest uppercase mb-1">
+                                        <span>{resolvedClientName || 'Workspace'}</span>
+                                        <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span>{resolvedProjectName || 'Project'}</span>
+                                        {ticket.swimlaneId && (
                                             <>
-                                                <span className="opacity-40">•</span>
-                                                <span className="flex items-center gap-1">
-                                                    Assigned to <span className="font-semibold">{assignedUsers.map(u => u.displayName || u.email).join(', ')}</span>
-                                                </span>
+                                                <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                                <span>{ticket.swimlaneId}</span>
                                             </>
                                         )}
                                     </div>
+                                    {isEditingTitle ? (
+                                        <Input
+                                            className="text-4xl font-extrabold text-primary dark:text-blue-400 tracking-tight max-w-3xl leading-tight h-auto py-1 px-2 border-primary/30"
+                                            value={tempTitle}
+                                            onChange={(e) => setTempTitle(e.target.value)}
+                                            autoFocus
+                                            onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
+                                            onBlur={handleSaveTitle}
+                                        />
+                                    ) : (
+                                        <h1 
+                                            className="text-4xl font-extrabold text-primary dark:text-white tracking-tight max-w-3xl leading-tight cursor-pointer hover:underline decoration-primary/30"
+                                            onClick={() => setIsEditingTitle(true)}
+                                        >
+                                            {title}
+                                        </h1>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Meta Strip */}
+                            <div className="flex flex-wrap items-center gap-10 py-6 border-b border-outline-variant/20 dark:border-slate-800">
+                                <div className="flex flex-col gap-1.5">
+                                    <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Status</span>
+                                    <Popover modal={false} open={statusDropdownOpen} onOpenChange={setStatusDropdownOpen}>
+                                        <PopoverTrigger asChild>
+                                            <div className="flex items-center gap-2 bg-secondary/10 dark:bg-blue-900/40 text-secondary dark:text-blue-300 px-3 py-1.5 rounded-full text-xs font-bold cursor-pointer hover:bg-secondary/20 transition-colors shadow-sm border border-secondary/10">
+                                                <span className="w-2.5 h-2.5 rounded-full shadow-inner" style={{ backgroundColor: bannerColor || 'blue' }}></span>
+                                                {statusLabel}
+                                            </div>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[200px] p-2" align="start">
+                                            <div className="space-y-1">
+                                                <p className="text-xs font-semibold px-2 py-1">Change Status</p>
+                                                {statuses.map((s) => (
+                                                    <Button key={s.id} variant="ghost" className="w-full justify-start h-8 px-2 text-xs font-semibold" onClick={() => { handleStatusUpdate(s.id, s.color); setStatusDropdownOpen(false); }}>
+                                                        <div className="flex items-center gap-2 flex-1">
+                                                            <div className="h-2 w-2 rounded-full shadow-inner" style={{ backgroundColor: s.color }} />
+                                                            <span>{s.title}</span>
+                                                        </div>
+                                                        {currentStatusId === s.id && <Check className="h-3 w-3" />}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
 
-                                {/* Description Area */}
-                                <div className="space-y-4">
-                                    <div className="flex items-start gap-4">
-                                        <div className="h-8 w-8 rounded-full overflow-hidden flex-shrink-0 border bg-muted mt-1">
-                                            {currentUser?.photoURL ? (
-                                                <Avatar className="h-full w-full">
-                                                    <AvatarImage src={currentUser.photoURL} />
-                                                    <AvatarFallback>{currentUser.displayName?.[0]}</AvatarFallback>
-                                                </Avatar>
-                                            ) : (
-                                                <User className="h-full w-full p-1.5 opacity-40" />
-                                            )}
-                                        </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Assignees</span>
+                                    <div className="flex -space-x-2">
+                                        <TicketAssigneePicker 
+                                            value={assigneeIds} 
+                                            onValueChange={async (newIds) => { 
+                                                setAssigneeIds(newIds); 
+                                                await editTicket(ticket.id, { assigneeIds: newIds }); 
+                                            }} 
+                                        />
+                                        {/* Avatar overlap visual purely handled by the picker internally, but we can display the current ones cleanly alongside if needed */}
+                                    </div>
+                                </div>
 
-                                        <div className="flex-1 space-y-4">
-                                            {isEditingDesc ? (
-                                                <div className="space-y-3">
-                                                    <DescriptionEditor
-                                                        ref={descriptionEditorRef}
-                                                        content={tempDesc}
-                                                        onChange={setTempDesc}
-                                                        projectId={projectId}
-                                                        ticketId={ticket.id}
-                                                        projectName={resolvedProjectName}
-                                                        clientName={resolvedClientName}
-                                                        onDropFiles={() => setIsDragging(false)}
-                                                    />
-                                                    {tempDesc !== description && (
-                                                        <div className="flex items-center gap-2">
-                                                            <Button
-                                                                onClick={handleSaveDesc}
-                                                                className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3 text-xs"
-                                                            >
-                                                                Update description
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                onClick={() => {
-                                                                    setTempDesc(description);
-                                                                    setIsEditingDesc(false);
-                                                                }}
-                                                                className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground"
-                                                            >
-                                                                Cancel
-                                                            </Button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <div
-                                                    className={cn(
-                                                        "group relative min-h-[40px] transition-all",
-                                                        !description && "cursor-pointer"
-                                                    )}
-                                                    onClick={() => {
-                                                        if (!description) {
-                                                            setIsEditingDesc(true);
-                                                            setTimeout(() => descriptionEditorRef.current?.focus(), 100);
-                                                        }
-                                                    }}
-                                                >
-                                                    {description ? (
-                                                        <div className="space-y-4">
-                                                            <div
-                                                                className="text-sm text-foreground/80 leading-relaxed cursor-pointer hover:bg-muted/10 p-2 -m-2 rounded transition-colors prose prose-sm max-w-none"
-                                                                onClick={() => {
-                                                                    setIsEditingDesc(true);
-                                                                    setTimeout(() => descriptionEditorRef.current?.focus(), 100);
-                                                                }}
-                                                                dangerouslySetInnerHTML={{ __html: description }}
-                                                            />
-                                                            <Button
-                                                                variant="secondary"
-                                                                size="sm"
-                                                                className="bg-[#EDEDED] text-[#4A4A4A] hover:bg-[#E0E0E0] h-8 px-4 font-normal text-xs transition-transform active:scale-95"
-                                                                onClick={() => {
-                                                                    setIsEditingDesc(true);
-                                                                    setTimeout(() => descriptionEditorRef.current?.focus(), 100);
-                                                                }}
-                                                            >
-                                                                Edit description
-                                                            </Button>
-                                                        </div>
-                                                    ) : (
-                                                        <Button variant="secondary" className="bg-[#EDEDED] text-[#4A4A4A] hover:bg-[#E0E0E0] h-8 px-4 font-normal text-xs transition-transform active:scale-95">
-                                                            Add description
+                                <div className="flex flex-col gap-1.5">
+                                    <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Deadline</span>
+                                    <Popover modal={false}>
+                                        <PopoverTrigger asChild>
+                                            <div className="flex items-center gap-2 text-on-surface font-medium text-sm cursor-pointer hover:text-primary transition-colors py-1">
+                                                <span className="material-symbols-outlined text-lg opacity-80">calendar_today</span>
+                                                {dueDate ? format(dueDate, "MMMM d, yyyy") : "Set date"}
+                                            </div>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <CalendarComponent mode="single" selected={dueDate} onSelect={handleDateSelect} initialFocus />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div className="px-12 grid grid-cols-12 gap-12 pb-24">
+                            <div className="col-span-12 lg:col-span-8 flex flex-col gap-12">
+                                {/* Description Section */}
+                                <section className="flex flex-col gap-4">
+                                    <div className="flex justify-between items-center">
+                                        <h3 className="text-xl font-bold text-primary dark:text-white flex items-center gap-2">
+                                            <span className="material-symbols-outlined">description</span>
+                                            Detailed Description
+                                        </h3>
+                                    </div>
+                                    
+                                    <div className="bg-surface-container-lowest dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 leading-relaxed text-on-surface-variant space-y-4">
+                                        {isEditingDesc ? (
+                                            <div className="space-y-4">
+                                                <DescriptionEditor
+                                                    ref={descriptionEditorRef}
+                                                    content={tempDesc}
+                                                    onChange={setTempDesc}
+                                                    projectId={projectId}
+                                                    ticketId={ticket.id}
+                                                    projectName={resolvedProjectName}
+                                                    clientName={resolvedClientName}
+                                                    onDropFiles={() => setIsDragging(false)}
+                                                />
+                                                {tempDesc !== description && (
+                                                    <div className="flex items-center gap-2 pt-2">
+                                                        <Button onClick={handleSaveDesc} className="bg-primary text-white hover:bg-primary/90 rounded-lg text-sm font-bold shadow-lg shadow-primary/20">
+                                                            Save Description
                                                         </Button>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
+                                                        <Button variant="ghost" onClick={() => { setTempDesc(description); setIsEditingDesc(false); }} className="text-slate-500 font-bold hover:bg-slate-100 text-sm">
+                                                            Cancel
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="group relative transition-all">
+                                                {description ? (
+                                                    <div className="space-y-6">
+                                                        <div 
+                                                            className="text-base text-slate-800 dark:text-slate-200 leading-relaxed cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 p-4 -m-4 rounded-xl transition-colors min-h-[100px] prose prose-sm dark:prose-invert max-w-none"
+                                                            onClick={() => { setIsEditingDesc(true); setTimeout(() => descriptionEditorRef.current?.focus(), 100); }}
+                                                            dangerouslySetInnerHTML={{ __html: description }}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div onClick={() => { setIsEditingDesc(true); setTimeout(() => descriptionEditorRef.current?.focus(), 100); }} className="w-full py-12 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-400 text-sm font-medium hover:bg-white hover:border-primary hover:text-primary transition-all flex flex-col items-center justify-center gap-3 cursor-pointer">
+                                                        <span className="material-symbols-outlined text-3xl">edit_document</span>
+                                                        <span>Add a detailed description...</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
+                                </section>
 
+                                {/* Time Tracking */}
+                                <section className="pt-8 border-t border-outline-variant/10 dark:border-slate-800">
+                                    <TicketTimeTracking
+                                        ticketId={ticket.id}
+                                        projectId={projectId}
+                                        projectName={resolvedProjectName}
+                                        timeEntries={timeEntries}
+                                        onSave={(updated) => {
+                                            setTimeEntries(updated);
+                                            editTicket(ticket.id, { timeEntries: updated });
+                                        }}
+                                    />
+                                </section>
 
-                                {/* Discussion Area */}
-                                <div className="pt-8 border-t space-y-4">
-                                    <div className="flex items-center gap-3 text-sm font-semibold text-[#4A4A4A] dark:text-foreground">
-                                        <MessageSquare className="h-4 w-4" />
-                                        Discussion / Add Comments
-                                    </div>
+                                {/* Discussion */}
+                                <section className="flex flex-col gap-6 pt-8 border-t border-outline-variant/10 dark:border-slate-800">
+                                    <h3 className="text-xl font-bold text-primary dark:text-white flex items-center gap-2">
+                                        <span className="material-symbols-outlined">forum</span>
+                                        Discussion
+                                    </h3>
                                     <TicketComments
                                         comments={comments}
                                         onChange={(newComments) => {
@@ -456,142 +446,67 @@ export function EditTicketDialog({ ticket, projectId, projectName, clientName, o
                                             editTicket(ticket.id, { comments: newComments });
                                         }}
                                     />
-                                </div>
+                                </section>
                             </div>
-
-                            {/* Sidebar */}
-                            <div className="w-full md:w-[220px] bg-white dark:bg-card border-l p-6 space-y-6">
-                                <div className="space-y-6">
-                                    <div className="space-y-1.5">
-                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1 mb-2">Actions</p>
-
-                                        {/* Status Popover */}
-                                        <Popover modal={false} open={statusDropdownOpen} onOpenChange={setStatusDropdownOpen}>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    variant="secondary"
-                                                    className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 text-foreground/80 transition-colors"
-                                                >
-                                                    <Check className="h-3.5 w-3.5 mr-2 opacity-70" />
-                                                    Status
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-[200px] p-2" align="start">
-                                                <div className="space-y-1">
-                                                    <p className="text-xs font-semibold px-2 py-1">Change Status</p>
-                                                    {statuses.map((s) => (
-                                                        <Button
-                                                            key={s.id}
-                                                            variant="ghost"
-                                                            className="w-full justify-start h-8 px-2 text-xs"
-                                                            onClick={() => {
-                                                                handleStatusUpdate(s.id, s.color);
-                                                                setStatusDropdownOpen(false);
-                                                            }}
-                                                        >
-                                                            <div className="flex items-center gap-2 flex-1">
-                                                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
-                                                                <span>{s.title}</span>
-                                                            </div>
-                                                            {currentStatusId === s.id && <Check className="h-3 w-3" />}
-                                                        </Button>
-                                                    ))}
-                                                </div>
-                                            </PopoverContent>
-                                        </Popover>
-
-                                        {/* Assign Popover */}
-                                        <TicketAssigneePicker
-                                            value={assigneeIds}
-                                            onValueChange={async (newIds) => {
-                                                setAssigneeIds(newIds);
-                                                await editTicket(ticket.id, { assigneeIds: newIds });
-                                            }}
-                                        />
-
-                                        <Button
-                                            variant="secondary"
-                                            className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 text-foreground/80 transition-colors"
-                                            onClick={() => {
-                                                if (!isEditingDesc) setIsEditingDesc(true);
-
-                                                let attempts = 0;
-                                                const tryLink = () => {
-                                                    if (descriptionEditorRef.current?.isReady) {
-                                                        descriptionEditorRef.current.insertLink();
-                                                    } else if (attempts < 10) {
-                                                        attempts++;
-                                                        setTimeout(tryLink, 100);
-                                                    }
-                                                };
-                                                setTimeout(tryLink, 100);
-                                            }}
-                                        >
-                                            <Link2 className="h-3.5 w-3.5 mr-2 opacity-70" />
-                                            Link
-                                        </Button>
-                                        <Popover modal={false}>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    variant="secondary"
-                                                    className={cn(
-                                                        "w-full justify-start h-8 px-2 text-xs font-normal transition-colors",
-                                                        dueDate ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-muted/40 hover:bg-muted/80 text-foreground/80"
-                                                    )}
-                                                >
-                                                    <Calendar className={cn("h-3.5 w-3.5 mr-2", dueDate ? "opacity-100" : "opacity-70")} />
-                                                    {dueDate ? format(dueDate, "PPP") : "Due date"}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <CalendarComponent
-                                                    mode="single"
-                                                    selected={dueDate}
-                                                    onSelect={handleDateSelect}
-                                                    initialFocus
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
-                                    </div>
-
-                                    <div className="space-y-1.5 pt-4">
-                                        <Button
-                                            variant="secondary"
-                                            className="w-full justify-start h-8 px-2 text-xs font-normal bg-muted/40 hover:bg-muted/80 transition-colors"
-                                            onClick={handleArchive}
-                                        >
-                                            <Archive className="h-3.5 w-3.5 mr-2 opacity-70" />
-                                            Archive
-                                        </Button>
+                            
+                            {/* Analytics & Actions Sidebar */}
+                            <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                <div className="bg-surface-container-low/50 dark:bg-slate-800 rounded-3xl p-6 flex flex-col gap-6 border border-primary/5 shadow-sm">
+                                    <h4 className="text-sm font-bold text-primary dark:text-blue-400 uppercase tracking-widest flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[16px]">psychology</span>
+                                        Task Data
+                                    </h4>
+                                    
+                                    <div className="flex flex-col gap-4 border-t border-outline-variant/10 dark:border-slate-700 pt-4">
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-on-surface-variant font-medium">Created By</span>
+                                            <span className="font-bold text-slate-900 dark:text-white">{users.find(u => u.uid === ticket.createdBy || u.email === ticket.createdBy)?.displayName || 'System'}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-on-surface-variant font-medium">Added</span>
+                                            <span className="font-bold text-slate-900 dark:text-white">{ticket.createdAt && ticket.createdAt.seconds ? format(new Date(ticket.createdAt.seconds * 1000), "MMM d, yyyy") : 'Unknown'}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-on-surface-variant font-medium">Updated</span>
+                                            <span className="font-bold text-slate-900 dark:text-white">{ticket.updatedAt && ticket.updatedAt.seconds ? format(new Date(ticket.updatedAt.seconds * 1000), "MMM d, p") : 'Unknown'}</span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="pt-6 border-t mt-auto">
+                                {/* Actions Card */}
+                                <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col gap-3">
+                                    <h4 className="text-sm font-bold text-primary dark:text-white mb-2 ml-1">Danger Zone</h4>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-start h-10 px-4 font-bold text-slate-600 hover:text-slate-900 active:scale-[0.98] transition-all rounded-xl border-slate-200 dark:border-slate-700"
+                                        onClick={handleArchive}
+                                    >
+                                        <Archive className="h-4 w-4 mr-3 opacity-70" />
+                                        Archive Ticket
+                                    </Button>
+
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="sm" className="w-full justify-start text-[10px] text-destructive hover:bg-destructive/10 hover:text-destructive h-7">
-                                                <Trash2 className="h-3 w-3 mr-2" />
-                                                Remove Ticket
+                                            <Button variant="outline" className="w-full justify-start text-error hover:text-white hover:bg-error h-10 px-4 font-bold active:scale-[0.98] transition-all rounded-xl border-red-200 dark:border-red-900/50 hover:border-error">
+                                                <Trash2 className="h-4 w-4 mr-3 opacity-90" />
+                                                Delete Permanently
                                             </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>Delete Ticket?</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                    This action cannot be undone.
+                                                    This action cannot be undone. All files, descriptions, and discussion comments will be lost permanently.
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                                    Delete
+                                                <AlertDialogCancel className="font-bold rounded-xl">Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={handleDelete} className="bg-error text-white hover:bg-error/90 font-bold rounded-xl shadow-lg shadow-error/20">
+                                                    Yes, Delete Ticket
                                                 </AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
-                                    <p className="text-[9px] text-muted-foreground mt-4 px-1">
-                                        Updated: {ticket.updatedAt ? new Date(ticket.updatedAt.toDate()).toLocaleDateString() : 'Today'}
-                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -614,7 +529,7 @@ export function EditTicketDialog({ ticket, projectId, projectName, clientName, o
                                 setShowUnsavedAlert(false);
                                 onOpenChange(false);
                             }}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            className="bg-error text-white hover:bg-error/90"
                         >
                             Discard Changes
                         </AlertDialogAction>

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Project Atrium | Project Overview</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "error": "#ba1a1a",
+              "surface-container-lowest": "#ffffff",
+              "surface-tint": "#545f73",
+              "secondary-fixed-dim": "#adc6ff",
+              "on-error-container": "#93000a",
+              "on-primary-fixed": "#111c2d",
+              "outline": "#75777d",
+              "surface": "#f6fafe",
+              "primary": "#0052cc", // Updated to vibrant primary blue
+              "primary-fixed": "#d8e3fb",
+              "tertiary-fixed-dim": "#4edea3",
+              "on-surface-variant": "#45474c",
+              "surface-container": "#eaeef2",
+              "secondary": "#0058be",
+              "on-tertiary-container": "#00a472",
+              "inverse-surface": "#2c3134",
+              "surface-bright": "#f6fafe",
+              "surface-container-high": "#e4e9ed",
+              "on-secondary-container": "#fefcff",
+              "on-primary-fixed-variant": "#3c475a",
+              "on-primary": "#ffffff",
+              "tertiary-fixed": "#6ffbbe",
+              "tertiary": "#00190e",
+              "background": "#f6fafe",
+              "on-tertiary-fixed-variant": "#005236",
+              "surface-container-highest": "#dfe3e7",
+              "tertiary-container": "#00301e",
+              "on-primary-container": "#8590a6",
+              "inverse-on-surface": "#edf1f5",
+              "on-error": "#ffffff",
+              "on-tertiary": "#ffffff",
+              "primary-fixed-dim": "#bcc7de",
+              "primary-container": "#e0ebff", // Softer container for blue
+              "secondary-fixed": "#d8e2ff",
+              "error-container": "#ffdad6",
+              "surface-variant": "#dfe3e7",
+              "inverse-primary": "#bcc7de",
+              "surface-container-low": "#f0f4f8",
+              "on-secondary-fixed": "#001a42",
+              "on-surface": "#171c1f",
+              "on-background": "#171c1f",
+              "surface-dim": "#d6dade",
+              "on-secondary": "#ffffff",
+              "secondary-container": "#2170e4",
+              "on-tertiary-fixed": "#002113",
+              "on-secondary-fixed-variant": "#004395",
+              "outline-variant": "#c5c6cd"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-surface text-on-surface antialiased">
+<!-- SideNavBar Component -->
+<aside class="h-screen w-64 fixed left-0 top-0 z-40 bg-[#f0f4f8] dark:bg-slate-900/80 backdrop-blur-xl flex flex-col py-6 font-['Inter'] antialiased tracking-tight">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-lg">grid_view</span>
+</div>
+<div>
+<h1 class="text-xl font-bold text-slate-900 dark:text-white leading-tight">The Digital Atrium</h1>
+<p class="text-[10px] uppercase tracking-widest text-primary/60 font-bold">Enterprise Workspace</p>
+</div>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-slate-200 transition-colors hover:bg-primary/5 dark:hover:bg-slate-800/50 rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">home</span>
+<span class="text-sm font-medium">Home</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-slate-200 transition-colors hover:bg-primary/5 dark:hover:bg-slate-800/50 rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">check_circle</span>
+<span class="text-sm font-medium">My Tasks</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-slate-200 transition-colors hover:bg-primary/5 dark:hover:bg-slate-800/50 rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">inbox</span>
+<span class="text-sm font-medium">Inbox</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-primary font-bold border-l-4 border-primary bg-primary/10 translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">folder</span>
+<span class="text-sm">Projects</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-slate-200 transition-colors hover:bg-primary/5 dark:hover:bg-slate-800/50 rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">bar_chart</span>
+<span class="text-sm font-medium">Reporting</span>
+</a>
+</nav>
+<div class="px-6 mt-6">
+<button class="w-full py-2.5 px-4 bg-primary text-on-primary rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95">
+                Create Project
+            </button>
+</div>
+<div class="mt-auto px-3 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 hover:text-primary transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 hover:text-primary transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="text-sm font-medium">Help</span>
+</a>
+</div>
+</aside>
+<!-- TopNavBar Component -->
+<header class="fixed top-0 right-0 left-64 h-16 z-30 bg-[#f6fafe]/80 backdrop-blur-md dark:bg-slate-950 flex justify-between items-center px-8 w-full border-b border-slate-200/50">
+<div class="flex items-center gap-8">
+<div class="relative group">
+<span class="absolute inset-y-0 left-0 flex items-center pl-3 text-primary/60">
+<span class="material-symbols-outlined text-xl">search</span>
+</span>
+<input class="pl-10 pr-4 py-1.5 bg-surface-container-high border-none rounded-full text-sm w-64 focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Search project..." type="text"/>
+</div>
+<nav class="flex gap-6">
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-slate-200 pb-4 mt-1 font-['Inter'] text-sm font-medium transition-colors" href="#">Board</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-slate-200 pb-4 mt-1 font-['Inter'] text-sm font-medium transition-colors" href="#">Timeline</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-slate-200 pb-4 mt-1 font-['Inter'] text-sm font-medium transition-colors" href="#">Calendar</a>
+<a class="text-primary border-b-2 border-primary pb-4 mt-1 font-['Inter'] text-sm font-bold" href="#">Dashboard</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="px-4 py-1.5 text-sm font-bold text-primary hover:bg-primary/10 rounded-lg transition-colors">Invite</button>
+<button class="w-10 h-10 flex items-center justify-center text-slate-600 hover:bg-primary/5 rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-surface"></span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-highest ring-2 ring-primary/10">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="Professional headshot of a business user" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8CiYLoaNhGvnTS_Zc_t8Uo5LVs8DoQ6UWIwXn4RHDuWJf3XIDnP3IkgMvimYn8S2SMRlFX06sWPKQS7AYhK5m-Gy0ndqUPPi1GWhY1bYOpe1uQDhXGaZvu69CWtUe-BqEex-mON1XM9rLyy42-caQgkuhM5PxogDSwqSanJar7oEyQOveeXoqdop35zVMSwGBrfgSvirzqg-cQfOB6e3Xq0jrA42WAhXc0q8eNqYBvLs4O8NNh5Xi8LU3Ee7wAUFp-ctMrXMh6hU"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-16 min-h-screen bg-surface p-8">
+<div class="max-w-7xl mx-auto">
+<!-- Dashboard Header -->
+<header class="mb-12">
+<div class="flex items-center gap-2 text-primary/70 mb-2">
+<span class="text-sm font-bold tracking-wider">Q4 PERFORMANCE</span>
+<span class="w-1 h-1 bg-primary/30 rounded-full"></span>
+<span class="text-sm font-bold tracking-wider">REVENUE GROWTH APP</span>
+</div>
+<h2 class="text-[3.5rem] font-extrabold tracking-tight text-slate-900 leading-none mb-4">Project Overview</h2>
+<div class="flex items-center gap-4">
+<div class="flex -space-x-2">
+<img alt="Team member" class="w-8 h-8 rounded-full border-2 border-surface" data-alt="Team member profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAp6eOsmsTj5GVVjb7hNFWGcqVTEsCu_CLTZNsfm2UytvgRvkclnQpPAf1lvcwp8fivOV4taCJzU2AnZwSYU_zdBzpydXzBc70AQUW4dRjSFT60yWGRvRKCRVMslU-Sicr7HjMUxTHwJpxg3qwjYB3Mw2-aALeEBIw4-0nj2n3myN4-SdJhohTRrKuB-o8BNemqQvHS44-CCtUoNygvnFo7JOJtLP6jXdXnoGa1qaw1jTcpda7XiIsrjaQ04z5050npJypKYFlX8AM"/>
+<img alt="Team member" class="w-8 h-8 rounded-full border-2 border-surface" data-alt="Team member profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTdtSv5Yd-9M3POZ-0FoLw4TQ2zP6-_7GYDyNrDHIf84YE9JFRAe7eE9B81IeoQ7YkzllRRsi2WtaMQqNTTV-HYGzRu2nV7M82MkKgQo7FohytRZlrkNlIrCbEaXxi_q1W_nMYL_iaRStMuw5OMwwvoH__MoNhDQAOL5oIZ-6UW37CJndp4DAX5kkP4ZMlQlNMu_oclei2-3-9_YYPd_1PgYTRzaGWnRInw_pZSnthcL_h23_Z0edapiaiFwwDLDwlQm7LEH8WtLo"/>
+<img alt="Team member" class="w-8 h-8 rounded-full border-2 border-surface" data-alt="Team member profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcKwMzPVB_T6oo7OWicg9-XWEgn6tSJuz4QqBOEbizzjJDn9RfcNfx92V5KuqOD-6OPByOilTDET6wkFWKbsOszsIELp2tS4LEM54IKDcuQ9nieIlHrgWCm5hftLcEvKaHIVFIw8r5brOa0bZDJQ5Tut8rkP9nd-k-DJTm-DDUcGYPq7p2riXzO0orNW3kxTpLU9qZydZ9WQEYn3_Eo1BVwljv45m3ov8onuiwC9n5KHWf0pZKUgphTGZPKZgGaMe-nuLown5kRas"/>
+<div class="w-8 h-8 rounded-full bg-primary/10 border-2 border-surface flex items-center justify-center text-[10px] font-bold text-primary">+5</div>
+</div>
+<span class="text-on-surface-variant text-sm font-medium">8 contributors active this week</span>
+</div>
+</header>
+<!-- Bento Grid Dashboard Layout -->
+<div class="grid grid-cols-12 gap-8 items-start">
+<!-- Health Summary Card (Large) -->
+<div class="col-span-12 lg:col-span-8 space-y-8">
+<div class="bg-surface-container-lowest rounded-xl p-8 flex flex-col md:flex-row gap-8 border border-primary/5">
+<div class="flex-1">
+<h3 class="text-headline-sm font-bold text-slate-900 mb-6 flex items-center gap-2">
+    Status: <span class="text-primary">On Track</span>
+</h3>
+<p class="text-on-surface-variant mb-8 max-w-md">Project velocity is up 12% compared to last sprint. All high-priority milestones for October have been achieved.</p>
+<div class="space-y-6">
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-sm font-bold text-slate-700">Total Progress</span>
+<span class="text-sm font-extrabold text-primary">74%</span>
+</div>
+<div class="h-2.5 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary via-primary to-blue-400 w-[74%] rounded-full shadow-sm"></div>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4">
+<div class="bg-surface-container-low p-4 rounded-lg border border-primary/5">
+<div class="text-[10px] uppercase font-bold text-primary mb-1">Completed</div>
+<div class="text-2xl font-extrabold text-slate-900">124</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg border border-primary/5">
+<div class="text-[10px] uppercase font-bold text-slate-500 mb-1">In Progress</div>
+<div class="text-2xl font-extrabold text-slate-900">18</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg border border-primary/5">
+<div class="text-[10px] uppercase font-bold text-error mb-1">Blocked</div>
+<div class="text-2xl font-extrabold text-error">2</div>
+</div>
+</div>
+</div>
+</div>
+<div class="w-full md:w-64 h-64 flex items-center justify-center bg-primary/5 rounded-xl relative overflow-hidden">
+<div class="absolute inset-0 opacity-10">
+<img alt="Abstract Pattern" class="w-full h-full object-cover" data-alt="Blue and purple abstract gradient pattern" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9gekW4PPMIkACVKo5BM8JsYETMte_Q7xGRN47XYRUV9dFB4EFfhcuJQ0VuP9nonqPyYxNM7p5wCpX0tIH98Wx7wEBNgysG3ryNmSFs9bxEgLvl2eluVKCUDp66PBMjqw8-lKrESEMBjAEMq57r-cYN8T7wtQqCyEz3BK1qvCZKM1g-SoEbBSvWjMMs8ss7wI_JJeBMc_dJuPKNW_88RbaeX4GovyBCL90Y_lKaJDjIMj2tzSHqTvbi3Ffxnx6kXyMF5cXVb3aD5w"/>
+</div>
+<!-- Simple Chart Visualization -->
+<div class="relative z-10 flex flex-col items-center">
+<svg class="w-40 h-40 transform -rotate-90 drop-shadow-sm">
+<circle class="text-primary/10" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-width="12"></circle>
+<circle class="text-primary" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-dasharray="440" stroke-dashoffset="114" stroke-linecap="round" stroke-width="12"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-3xl font-extrabold text-primary">74%</span>
+<span class="text-[10px] font-bold text-primary/60 uppercase">Efficiency</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Upcoming Deadlines -->
+<section>
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-xl font-bold text-slate-900">Upcoming Deadlines</h3>
+<button class="text-sm font-bold text-primary hover:underline">View All</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Deadline Card 1 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl group hover:border-primary/20 border border-transparent transition-all cursor-pointer shadow-sm">
+<div class="flex items-start justify-between mb-4">
+<span class="px-3 py-1 bg-error-container text-on-error-container text-[10px] font-bold rounded-full uppercase">Urgent</span>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary">more_horiz</span>
+</div>
+<h4 class="font-bold text-lg mb-1 group-hover:text-primary transition-colors text-slate-900">Finalize API Documentation</h4>
+<p class="text-sm text-on-surface-variant mb-4">Core infrastructure completion phase.</p>
+<div class="flex items-center justify-between pt-4 border-t border-surface-container">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-error">event</span>
+<span class="text-xs font-bold text-error">Oct 24, 2023</span>
+</div>
+<img alt="Assignee" class="w-6 h-6 rounded-full" data-alt="Assignee profile thumbnail" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJLS9C0bQ1fZweAx_rlYUgpfGWL5r1ZoxejV2b_t3j-H-IjGphoMxY6Auw2crjPsyvhWuijZenAiEC_7fQa5jHMuHnNPNzmlXJE4-pobA12Gzw-FXgOdXXc7RaHhR4qZ4f1zNGnZXKagrt7m1hHMCxO0eWASKbXNnuFn8KV_axmC5S-0g-r9Sv54awrQ7vOfPzRgUB4uWRHK32-LEwdwMZSYH-mzSoR-HjTbZTsyP1Dm6nzwJFSkyIrp0xDgi16gsy8rV3uH7ImdY"/>
+</div>
+</div>
+<!-- Deadline Card 2 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl group hover:border-primary/20 border border-transparent transition-all cursor-pointer shadow-sm">
+<div class="flex items-start justify-between mb-4">
+<span class="px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-bold rounded-full uppercase">Marketing</span>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary">more_horiz</span>
+</div>
+<h4 class="font-bold text-lg mb-1 group-hover:text-primary transition-colors text-slate-900">Social Campaign Assets</h4>
+<p class="text-sm text-on-surface-variant mb-4">Visual design for launch week.</p>
+<div class="flex items-center justify-between pt-4 border-t border-surface-container">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-primary">event</span>
+<span class="text-xs font-bold text-primary">Oct 28, 2023</span>
+</div>
+<img alt="Assignee" class="w-6 h-6 rounded-full" data-alt="Assignee profile thumbnail" src="https://lh3.googleusercontent.com/aida-public/AB6AXuByoD70afb_lH2iytcHC8gVUcQuSWd9JeAcxQSyRHmjDtyaFGKtq99b2Zae3UVrSUHs0VbLd-AJ2ZEj5YawqSSLgB-U_FHAnF8y2WKq-CykuWo3w9B5LJGaxdpjtEPkoZ2kFlsF3WH7Y1mC67IrCwOvGA-adR3FCZPyc0MxEPMEaOEbagC1W9Je2mENnXCJytJ0CQAxSS4l9NwRbwtgvVfVgmaZQoWRwEPY9n8zHdXJf9_IyTwyF5jy6yCyCPm9zIUTj2uAgrNyjuI"/>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Activity Feed (Right Column) -->
+<aside class="col-span-12 lg:col-span-4 bg-surface-container-low/50 rounded-xl p-8 sticky top-24 border border-primary/5">
+<h3 class="text-xl font-bold text-slate-900 mb-8">Recent Activity</h3>
+<div class="space-y-8 relative">
+<!-- Timeline Line -->
+<div class="absolute left-4 top-2 bottom-2 w-px bg-primary/10"></div>
+<!-- Activity Item 1 -->
+<div class="relative pl-10">
+<div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-primary flex items-center justify-center z-10 shadow-md shadow-primary/20">
+<span class="material-symbols-outlined text-xs text-white" style="font-variation-settings: 'FILL' 1;">add_task</span>
+</div>
+<div class="flex flex-col">
+<p class="text-sm font-medium text-slate-700"><span class="font-bold text-slate-900">Sarah Chen</span> added a new task to <span class="text-primary font-bold underline underline-offset-4 decoration-primary/30">Backend Sprint</span></p>
+<span class="text-[11px] font-bold text-primary/60 mt-1">2 HOURS AGO</span>
+</div>
+</div>
+<!-- Activity Item 2 -->
+<div class="relative pl-10">
+<div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-on-tertiary-container flex items-center justify-center z-10 shadow-md">
+<span class="material-symbols-outlined text-xs text-white" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="flex flex-col">
+<p class="text-sm font-medium text-slate-700"><span class="font-bold text-slate-900">Marcus Wright</span> completed <span class="italic text-on-surface-variant">Database Schema Optimization</span></p>
+<span class="text-[11px] font-bold text-primary/60 mt-1">5 HOURS AGO</span>
+</div>
+</div>
+<!-- Activity Item 3 -->
+<div class="relative pl-10">
+<div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-white flex items-center justify-center z-10 shadow-md border border-primary/10">
+<span class="material-symbols-outlined text-xs text-primary">comment</span>
+</div>
+<div class="flex flex-col">
+<p class="text-sm font-medium text-slate-700"><span class="font-bold text-slate-900">Julia Lopez</span> commented on <span class="text-primary font-bold">Hero Illustration</span></p>
+<div class="mt-2 p-3 bg-white/80 rounded-lg text-xs italic text-slate-600 border-l-4 border-primary shadow-sm">
+                                    "Looks great, but can we try a warmer color palette?"
+                                </div>
+<span class="text-[11px] font-bold text-primary/60 mt-2">YESTERDAY</span>
+</div>
+</div>
+<!-- Activity Item 4 -->
+<div class="relative pl-10">
+<div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-error flex items-center justify-center z-10 shadow-md shadow-error/20">
+<span class="material-symbols-outlined text-xs text-white">warning</span>
+</div>
+<div class="flex flex-col">
+<p class="text-sm font-medium text-slate-700">Task <span class="font-bold text-slate-900">Mobile Responsive Fix</span> was moved to <span class="text-error font-bold">Blocked</span></p>
+<span class="text-[11px] font-bold text-primary/60 mt-1">OCT 21, 14:30</span>
+</div>
+</div>
+</div>
+<button class="w-full mt-12 py-3 bg-white border border-primary/20 text-primary font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-primary/5 transition-colors shadow-sm">
+                        View Full History
+                    </button>
+</aside>
+</div>
+<!-- Dashboard Bottom Quick Actions -->
+<div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="bg-gradient-to-br from-primary via-[#1e40af] to-[#1e3a8a] p-6 rounded-2xl text-white group cursor-pointer hover:scale-[1.03] transition-all shadow-xl shadow-primary/20">
+<div class="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4 group-hover:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-3xl text-white opacity-90" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<h4 class="text-xl font-bold mb-2">AI Insights</h4>
+<p class="text-sm text-white/80 leading-relaxed font-medium">Let Atrium analyze your project flow and suggest optimizations with our latest ML model.</p>
+</div>
+<div class="bg-gradient-to-br from-white to-[#f0f9ff] p-6 rounded-2xl border-2 border-primary/10 shadow-lg group cursor-pointer hover:scale-[1.03] transition-all hover:border-primary/30">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-3xl text-primary" style="font-variation-settings: 'FILL' 1;">share</span>
+</div>
+<h4 class="text-xl font-bold mb-2 text-slate-900">Export Report</h4>
+<p class="text-sm text-slate-600 leading-relaxed font-medium">Generate professional PDF or CSV reports customized for your stakeholders.</p>
+</div>
+<div class="bg-gradient-to-br from-white to-[#fdf2f8] p-6 rounded-2xl border-2 border-slate-100 shadow-lg group cursor-pointer hover:scale-[1.03] transition-all hover:border-pink-200">
+<div class="w-12 h-12 rounded-xl bg-pink-50 flex items-center justify-center mb-4 group-hover:bg-pink-100 transition-colors">
+<span class="material-symbols-outlined text-3xl text-pink-600" style="font-variation-settings: 'FILL' 1;">history_edu</span>
+</div>
+<h4 class="text-xl font-bold mb-2 text-slate-900">Resource Log</h4>
+<p class="text-sm text-slate-600 leading-relaxed font-medium">Audit the time and budget allocated to recent sprints and team performance.</p>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB Action (Contextual to Dashboard) -->
+<div class="fixed bottom-8 right-8 z-50">
+<button class="flex items-center gap-3 px-6 py-4 bg-primary text-on-primary rounded-full shadow-2xl shadow-primary/40 hover:bg-primary/90 transition-all active:scale-95 group">
+<span class="material-symbols-outlined group-hover:rotate-90 transition-transform">add</span>
+<span class="font-bold text-sm tracking-wide">Quick Task</span>
+</button>
+</div>
+</body></html>

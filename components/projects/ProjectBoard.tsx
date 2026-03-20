@@ -165,26 +165,27 @@ export function ProjectBoard({ projectId }: ProjectBoardProps) {
         if (!statusColor) return {};
 
         // Base opacity increases slightly per row to create vertical distinction
-        const opacity = 0.05 + (rowIndex * 0.03);
+        const opacity = 0.02 + (rowIndex * 0.015);
 
         return {
             backgroundColor: `${statusColor}${Math.floor(opacity * 255).toString(16).padStart(2, '0')}`,
-            borderLeft: `2px solid ${statusColor}22`
+            borderRight: `1px dashed ${statusColor}22`,
+            borderBottom: `1px dashed ${statusColor}22`
         };
     };
 
     return (
-        <div className="h-full w-full overflow-auto">
+        <div className="h-full w-full overflow-auto bg-surface dark:bg-slate-900">
             <DragDropContext onDragEnd={onDragEnd}>
                 <div className="grid min-w-full w-full" style={{
-                    gridTemplateColumns: `200px repeat(${statuses.length}, minmax(300px, 1fr))`
+                    gridTemplateColumns: `200px repeat(${statuses.length}, minmax(320px, 1fr))`
                 }}>
                     {/* Header Row */}
-                    <div className="sticky top-0 z-20 bg-background/95 backdrop-blur p-2 font-bold border-b-2 flex items-center justify-center">
+                    <div className="sticky top-0 z-20 bg-surface/95 dark:bg-slate-950/95 backdrop-blur-xl p-4 flex items-center justify-center border-b border-outline-variant/10">
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            className="h-8 w-8 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors"
                             onClick={() => setSettingsOpen(true)}
                         >
                             <Settings className="h-4 w-4" />
@@ -193,10 +194,15 @@ export function ProjectBoard({ projectId }: ProjectBoardProps) {
                     {statuses.map(status => (
                         <div
                             key={status.id}
-                            className="sticky top-0 z-20 bg-background/95 backdrop-blur p-4 font-bold text-center border-b-4 min-w-[300px]"
-                            style={{ borderBottomColor: status.color || 'transparent' }}
+                            className="sticky top-0 z-20 bg-surface/95 dark:bg-slate-950/95 backdrop-blur-xl p-4 border-b border-outline-variant/10 min-w-[320px] flex items-center"
                         >
-                            {status.title}
+                            <div className="flex items-center gap-3 px-2 w-full">
+                                <span className="w-3 h-3 rounded-full shadow-inner" style={{ backgroundColor: status.color || '#ccc' }}></span>
+                                <h3 className="font-bold text-primary dark:text-white text-[15px] tracking-tight uppercase flex-grow text-left">{status.title}</h3>
+                                <span className="text-xs bg-surface-container-low dark:bg-slate-800 shadow-sm px-2 py-0.5 rounded text-on-surface-variant font-bold">
+                                    {localTickets.filter(t => t.statusId === status.id || (!t.statusId && status.id === 'todo')).length}
+                                </span>
+                            </div>
                         </div>
                     ))}
 
@@ -205,10 +211,12 @@ export function ProjectBoard({ projectId }: ProjectBoardProps) {
                         <Fragment key={swimlane.id}>
                             {/* Row Header */}
                             <div
-                                className="sticky left-0 z-10 bg-background p-4 font-bold border-r-4 flex items-center shadow-sm"
-                                style={{ borderRightColor: swimlane.color || 'transparent' }}
+                                className="sticky left-0 z-10 bg-surface/95 dark:bg-slate-900/95 backdrop-blur flex items-center border-r border-b border-outline-variant/10"
                             >
-                                <span className="text-lg opacity-80">{swimlane.title}</span>
+                                <div className="flex items-center gap-3 px-4 py-3 ml-4 bg-surface-container-lowest dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+                                   <span className="w-2.5 h-2.5 rounded-full shadow-inner" style={{ backgroundColor: swimlane.color || '#ccc' }}></span>
+                                   <span className="text-[11px] font-bold uppercase text-primary dark:text-white tracking-widest">{swimlane.title}</span>
+                                </div>
                             </div>
 
                             {/* Status Cells */}
@@ -227,8 +235,8 @@ export function ProjectBoard({ projectId }: ProjectBoardProps) {
                                                 {...provided.droppableProps}
                                                 style={getCellStyles(status.color, rowIndex)}
                                                 className={cn(
-                                                    "p-3 min-h-[180px] flex flex-col gap-3 group border border-transparent transition-colors",
-                                                    snapshot.isDraggingOver && "ring-2 ring-primary/20 brightness-95"
+                                                    "p-4 flex flex-col gap-4 transition-colors min-h-[180px]",
+                                                    snapshot.isDraggingOver && "ring-2 ring-primary/20 brightness-95 inset-0"
                                                 )}
                                             >
                                                 {cellTickets.map((ticket, index) => (
@@ -248,12 +256,18 @@ export function ProjectBoard({ projectId }: ProjectBoardProps) {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="w-full opacity-0 group-hover:opacity-100 transition-opacity mt-auto hover:bg-background/50"
+                                                    className="w-full opacity-0 hover:opacity-100 focus:opacity-100 transition-opacity mt-auto text-on-surface-variant hover:text-primary hover:bg-surface-container-high border border-dashed border-outline-variant/30"
                                                     onClick={() => openCreateDialog(swimlane.id, status.id)}
                                                 >
                                                     <Plus className="h-4 w-4 mr-2" />
                                                     Add Ticket
                                                 </Button>
+                                                {/* Always show empty state drop area text slightly */}
+                                                {cellTickets.length === 0 && !snapshot.isDraggingOver && (
+                                                    <div className="flex-1 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer text-xs font-bold text-outline-variant/50 uppercase tracking-widest" onClick={() => openCreateDialog(swimlane.id, status.id)}>
+                                                        Drop here
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </Droppable>

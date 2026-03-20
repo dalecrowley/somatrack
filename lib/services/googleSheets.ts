@@ -208,3 +208,55 @@ export async function updateTimeEntry(spreadsheetId: string, sheetName: string, 
 
     return { success: true, updatedCount: updates.length };
 }
+
+/**
+ * Add hours to existing cell values (cumulative).
+ * Reads the current value, adds the new hours, and writes back.
+ * Used by ticket-level time tracking so multiple log entries accumulate.
+ */
+export async function addTimeEntry(
+    spreadsheetId: string,
+    sheetName: string,
+    dateStr: string,
+    entries: TimeEntryInfo[],
+    columnMapping: Record<string, string>
+) {
+    await initializeSheets();
+    if (!sheetsClient) throw new Error('Sheets client not initialized');
+
+    const rowNumber = await findDateRow(spreadsheetId, sheetName, dateStr);
+
+    // Read the current row so we can add to existing values
+    const response = await sheetsClient.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${sheetName}!A${rowNumber}:Z${rowNumber}`,
+    });
+    const rowValues: string[] = response.data.values ? response.data.values[0] : [];
+
+    const updates = [];
+    for (const entry of entries) {
+        const column = columnMapping[entry.project] || columnMapping[entry.project.toLowerCase()];
+        if (column) {
+            const colIndex = column.charCodeAt(0) - 65; // A=0, B=1…
+            const existingRaw = rowValues[colIndex];
+            const existing = existingRaw ? parseFloat(existingRaw) : 0;
+            const newValue = (isNaN(existing) ? 0 : existing) + entry.hours;
+            updates.push({
+                range: `${sheetName}!${column}${rowNumber}`,
+                values: [[newValue]],
+            });
+        }
+    }
+
+    if (updates.length > 0) {
+        await sheetsClient.spreadsheets.values.batchUpdate({
+            spreadsheetId,
+            resource: {
+                valueInputOption: 'USER_ENTERED',
+                data: updates,
+            },
+        });
+    }
+
+    return { success: true, updatedCount: updates.length };
+}
