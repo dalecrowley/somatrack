@@ -50,6 +50,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             fileId: boxFile.id,
             sharedLink,
+            // Convenience: the URL the app should store and use as src for <img>
+            contentUrl: `/api/box/content/${boxFile.id}`,
         });
 
     } catch (error: any) {

@@ -77,7 +77,10 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                 throw new Error(data.details || data.error || 'Upload failed');
             }
 
-            const photoURL: string = data.sharedLink;
+            // Use /api/box/content/{fileId} — the same proxied URL pattern used
+            // for client logos, project logos, and ticket attachments throughout the app.
+            // The Box shared link (data.sharedLink) is an HTML page, not a direct image URL.
+            const photoURL: string = data.contentUrl;
 
             // ── Update Firebase Auth profile ─────────────────────────────────
             if (auth.currentUser) {
